@@ -1,0 +1,17 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brew-900: #1a1207;
+  --color-brew-800: #2d1f0e;
+  --color-brew-700: #4a3520;
+  --color-brew-600: #6b4d30;
+  --color-brew-500: #8b6914;
+  --color-brew-400: #b8943a;
+  --color-brew-300: #d4b96a;
+  --color-brew-200: #e8d5a0;
+  --color-brew-100: #f5ecd4;
+  --color-brew-50: #faf6eb;
+  --color-margin-good: #16a34a;
+  --color-margin-warn: #ea580c;
+  --color-margin-bad: #dc2626;
+}
