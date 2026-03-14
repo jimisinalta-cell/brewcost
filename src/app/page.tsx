@@ -58,7 +58,7 @@ export default function DashboardPage() {
       const ris = riByRecipe.get(recipe.id) || [];
       const total_cost = ris.reduce((sum, ri) => {
         if (!ri.ingredient) return sum;
-        return sum + Number(ri.ingredient.cost_per_unit) * Number(ri.quantity_used);
+        return sum + Number(ri.ingredient.cost_per_recipe_unit) * Number(ri.quantity_used);
       }, 0);
       const price = Number(recipe.menu_price) || 0;
       const margin = price > 0 ? calculateMargin(price, total_cost) : null;

@@ -104,7 +104,7 @@ export default function RecipeForm({
   const totalCost = rows.reduce((sum, row) => {
     const ing = row.ingredient || ingredients.find((i) => i.id === row.ingredient_id);
     if (!ing) return sum;
-    return sum + Number(ing.cost_per_unit) * row.quantity_used;
+    return sum + Number(ing.cost_per_recipe_unit) * row.quantity_used;
   }, 0);
 
   const price = parseFloat(menuPrice) || 0;
@@ -265,7 +265,7 @@ export default function RecipeForm({
                     row.ingredient ||
                     ingredients.find((i) => i.id === row.ingredient_id);
                   const lineCost = ing
-                    ? Number(ing.cost_per_unit) * row.quantity_used
+                    ? Number(ing.cost_per_recipe_unit) * row.quantity_used
                     : 0;
 
                   return (
@@ -283,7 +283,7 @@ export default function RecipeForm({
                         >
                           {ingredients.map((i) => (
                             <option key={i.id} value={i.id}>
-                              {i.name} ({i.unit})
+                              {i.name} ({i.recipe_unit})
                             </option>
                           ))}
                         </select>
@@ -303,7 +303,7 @@ export default function RecipeForm({
                       </div>
                       <div className="sm:col-span-2 text-right text-sm text-brew-400">
                         {ing
-                          ? `$${Number(ing.cost_per_unit).toFixed(4)}/${ing.unit}`
+                          ? `$${Number(ing.cost_per_recipe_unit).toFixed(4)}/${ing.recipe_unit}`
                           : "—"}
                       </div>
                       <div className="sm:col-span-2 text-right text-sm font-medium">
