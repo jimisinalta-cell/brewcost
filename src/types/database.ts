@@ -48,7 +48,8 @@ export type PurchaseUnit =
   | "lb"
   | "kg"
   | "g"
-  | "each";
+  | "each"
+  | "case";
 
 // What you measure per drink (e.g. "8 oz of milk")
 export type RecipeUnit = "oz" | "ml" | "g" | "each";
@@ -64,6 +65,7 @@ export const PURCHASE_UNITS: { value: PurchaseUnit; label: string }[] = [
   { value: "kg", label: "kg" },
   { value: "g", label: "g" },
   { value: "each", label: "Each" },
+  { value: "case", label: "Case (of N units)" },
 ];
 
 export const RECIPE_UNITS: { value: RecipeUnit; label: string }[] = [
@@ -95,7 +97,7 @@ const VOLUME_UNITS = new Set(["gallon", "half_gallon", "quart", "liter", "ml", "
 const WEIGHT_UNITS = new Set(["lb", "kg", "g"]);
 
 export function getCompatibleRecipeUnits(purchaseUnit: PurchaseUnit): RecipeUnit[] {
-  if (purchaseUnit === "each") return ["each"];
+  if (purchaseUnit === "each" || purchaseUnit === "case") return ["each"];
   if (VOLUME_UNITS.has(purchaseUnit)) return ["oz", "ml"];
   if (WEIGHT_UNITS.has(purchaseUnit)) return ["g"];
   return ["oz", "ml", "g", "each"];
@@ -107,7 +109,7 @@ export function convertToRecipeUnit(
   purchasePrice: number,
   recipeUnit: RecipeUnit
 ): number {
-  if (purchaseUnit === "each" && recipeUnit === "each") {
+  if ((purchaseUnit === "each" || purchaseUnit === "case") && recipeUnit === "each") {
     return purchaseSize > 0 ? purchasePrice / purchaseSize : 0;
   }
 

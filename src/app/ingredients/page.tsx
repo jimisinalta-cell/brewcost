@@ -228,7 +228,9 @@ export default function IngredientsPage() {
             </div>
             <div>
               <label className="mb-1 block text-xs font-medium text-brew-600">
-                Qty purchased
+                {newPurchaseUnit === "case"
+                  ? "Units per case"
+                  : "Qty purchased"}
               </label>
               <input
                 type="number"
@@ -236,6 +238,7 @@ export default function IngredientsPage() {
                 min="0.01"
                 value={newPurchaseSize}
                 onChange={(e) => setNewPurchaseSize(e.target.value)}
+                placeholder={newPurchaseUnit === "case" ? "e.g. 500" : "1"}
                 className="w-full rounded-md border border-brew-200 px-3 py-2 text-sm focus:border-brew-500 focus:outline-none"
                 required
               />
@@ -318,7 +321,10 @@ export default function IngredientsPage() {
                 <div>
                   <h3 className="font-semibold text-brew-800">{ing.name}</h3>
                   <p className="text-sm text-brew-400 mt-0.5">
-                    {Number(ing.purchase_size)} {getPurchaseLabel(ing.purchase_unit)} @{" "}
+                    {ing.purchase_unit === "case"
+                      ? `Case of ${Number(ing.purchase_size)}`
+                      : `${Number(ing.purchase_size)} ${getPurchaseLabel(ing.purchase_unit)}`}{" "}
+                    @{" "}
                     {editingId === ing.id ? (
                       <span className="inline-flex items-center gap-1">
                         $
