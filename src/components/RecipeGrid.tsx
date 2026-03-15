@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Ingredient, Recipe, RecipeIngredient, COMMON_SIZES } from "@/types/database";
 import { formatCost, formatCurrency, formatPercent, calculateMargin } from "@/lib/utils";
@@ -181,6 +181,38 @@ export default function RecipeGrid() {
     );
   }
 
+  // Group recipes by name, sort by size within each group
+  function getSortedGroupedRecipes(): { groupName: string; recipes: GridRecipe[] }[] {
+    const groups = new Map<string, GridRecipe[]>();
+    for (const r of recipes) {
+      const list = groups.get(r.name) || [];
+      list.push(r);
+      groups.set(r.name, list);
+    }
+
+    // Sort groups alphabetically by name
+    const sortedGroups = Array.from(groups.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([groupName, groupRecipes]) => ({
+        groupName,
+        recipes: groupRecipes.sort((a, b) => {
+          const sizeA = parseSize(a.size);
+          const sizeB = parseSize(b.size);
+          return sizeA - sizeB;
+        }),
+      }));
+
+    return sortedGroups;
+  }
+
+  function parseSize(size: string | null): number {
+    if (!size) return 0;
+    const match = size.match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  }
+
+  const groupedRecipes = getSortedGroupedRecipes();
+
   if (ingredients.length === 0) {
     return (
       <div className="rounded-lg border border-dashed border-brew-300 bg-white py-16 text-center">
@@ -228,69 +260,90 @@ export default function RecipeGrid() {
           </tr>
         </thead>
         <tbody>
-          {recipes.map((recipe) => {
-            const cost = getCost(recipe);
-            const price = Number(recipe.menu_price) || 0;
-            const margin = price > 0 ? calculateMargin(price, cost) : null;
-            const marginColor =
-              margin === null
-                ? "text-brew-400"
-                : margin >= 65
-                ? "text-margin-good"
-                : margin >= 50
-                ? "text-margin-warn"
-                : "text-margin-bad";
-
-            return (
-              <tr key={recipe.id} className="border-b border-brew-100 hover:bg-brew-50/30">
-                <td className="sticky left-0 z-10 bg-white px-3 py-1.5 font-medium text-brew-800">
-                  {recipe.name}
-                </td>
-                <td className="px-3 py-1.5 text-brew-400 text-xs">
-                  {recipe.size || "—"}
-                </td>
-                {ingredients.map((ing) => (
-                  <td key={ing.id} className="px-1 py-1">
-                    <input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={recipe.quantities[ing.id] || ""}
-                      onChange={(e) => handleQuantityChange(recipe.id, ing.id, e.target.value)}
-                      placeholder="0"
-                      className="w-full min-w-[50px] rounded border border-brew-100 px-1.5 py-1 text-center text-sm focus:border-brew-400 focus:outline-none hover:border-brew-200"
-                    />
-                  </td>
-                ))}
-                <td className="px-3 py-1.5 text-right font-medium whitespace-nowrap">
-                  {formatCost(cost)}
-                </td>
-                <td className="px-1 py-1">
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={recipe.menu_price ?? ""}
-                    onChange={(e) => handleMenuPriceChange(recipe.id, e.target.value)}
-                    placeholder="0.00"
-                    className="w-full min-w-[60px] rounded border border-brew-100 px-1.5 py-1 text-right text-sm focus:border-brew-400 focus:outline-none hover:border-brew-200"
-                  />
-                </td>
-                <td className={`px-3 py-1.5 text-right font-semibold whitespace-nowrap ${marginColor}`}>
-                  {margin !== null ? formatPercent(margin) : "—"}
-                </td>
-                <td className="px-1 py-1.5 text-center">
-                  <button
-                    onClick={() => handleDeleteRow(recipe.id)}
-                    className="text-xs text-red-300 hover:text-red-500"
-                    title="Delete recipe"
+          {groupedRecipes.map((group) => (
+            <React.Fragment key={group.groupName}>
+              {/* Group header - only show if there are multiple groups or multiple sizes */}
+              {(groupedRecipes.length > 1 || group.recipes.length > 1) && (
+                <tr className="bg-brew-100/50">
+                  <td
+                    colSpan={ingredients.length + 6}
+                    className="sticky left-0 z-10 bg-brew-100/50 px-3 py-1.5 text-xs font-semibold text-brew-600 tracking-wide uppercase"
                   >
-                    ✕
-                  </button>
-                </td>
-              </tr>
-            );
-          })}
+                    {group.groupName}
+                  </td>
+                </tr>
+              )}
+              {group.recipes.map((recipe) => {
+                const cost = getCost(recipe);
+                const price = Number(recipe.menu_price) || 0;
+                const margin = price > 0 ? calculateMargin(price, cost) : null;
+                const marginColor =
+                  margin === null
+                    ? "text-brew-400"
+                    : margin >= 65
+                    ? "text-margin-good"
+                    : margin >= 50
+                    ? "text-margin-warn"
+                    : "text-margin-bad";
+
+                const showName = group.recipes.length === 1 && groupedRecipes.length <= 1;
+
+                return (
+                  <tr key={recipe.id} className="border-b border-brew-100 hover:bg-brew-50/30">
+                    <td className="sticky left-0 z-10 bg-white px-3 py-1.5 font-medium text-brew-800">
+                      {showName ? recipe.name : (
+                        <span className="pl-2 text-brew-600">
+                          {recipe.size || recipe.name}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-1.5 text-brew-400 text-xs">
+                      {showName ? (recipe.size || "—") : (recipe.size ? "" : "—")}
+                    </td>
+                    {ingredients.map((ing) => (
+                      <td key={ing.id} className="px-1 py-1">
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={recipe.quantities[ing.id] || ""}
+                          onChange={(e) => handleQuantityChange(recipe.id, ing.id, e.target.value)}
+                          placeholder="0"
+                          className="w-full min-w-[50px] rounded border border-brew-100 px-1.5 py-1 text-center text-sm focus:border-brew-400 focus:outline-none hover:border-brew-200"
+                        />
+                      </td>
+                    ))}
+                    <td className="px-3 py-1.5 text-right font-medium whitespace-nowrap">
+                      {formatCost(cost)}
+                    </td>
+                    <td className="px-1 py-1">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={recipe.menu_price ?? ""}
+                        onChange={(e) => handleMenuPriceChange(recipe.id, e.target.value)}
+                        placeholder="0.00"
+                        className="w-full min-w-[60px] rounded border border-brew-100 px-1.5 py-1 text-right text-sm focus:border-brew-400 focus:outline-none hover:border-brew-200"
+                      />
+                    </td>
+                    <td className={`px-3 py-1.5 text-right font-semibold whitespace-nowrap ${marginColor}`}>
+                      {margin !== null ? formatPercent(margin) : "—"}
+                    </td>
+                    <td className="px-1 py-1.5 text-center">
+                      <button
+                        onClick={() => handleDeleteRow(recipe.id)}
+                        className="text-xs text-red-300 hover:text-red-500"
+                        title="Delete recipe"
+                      >
+                        ✕
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </React.Fragment>
+          ))}
 
           {/* Add new row */}
           <tr className="border-t-2 border-brew-200 bg-brew-50/50">
