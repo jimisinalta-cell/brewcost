@@ -3,15 +3,20 @@
 import React, { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Ingredient, Recipe, RecipeIngredient, COMMON_SIZES } from "@/types/database";
-import { formatCost, formatCurrency, formatPercent, calculateMargin } from "@/lib/utils";
+import { formatCost, formatPercent, calculateMargin } from "@/lib/utils";
 
 interface GridRecipe {
   id: string;
   name: string;
   size: string | null;
   menu_price: number | null;
-  quantities: Record<string, number>; // ingredient_id -> quantity
-  isNew?: boolean;
+  quantities: Record<string, number>;
+}
+
+interface RecipeGroup {
+  groupName: string;
+  recipes: GridRecipe[];
+  ingredientIds: string[]; // only ingredients used by this group
 }
 
 export default function RecipeGrid() {
@@ -19,8 +24,11 @@ export default function RecipeGrid() {
   const [recipes, setRecipes] = useState<GridRecipe[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [newRowName, setNewRowName] = useState("");
-  const [newRowSize, setNewRowSize] = useState("");
+  const [addingTo, setAddingTo] = useState<string | null>(null); // group name being added to
+  const [newSize, setNewSize] = useState("");
+  const [newGroupName, setNewGroupName] = useState("");
+  const [newGroupSize, setNewGroupSize] = useState("");
+  const [showNewGroup, setShowNewGroup] = useState(false);
   const saveTimeouts = useRef<Record<string, NodeJS.Timeout>>({});
 
   const fetchData = useCallback(async () => {
@@ -47,13 +55,7 @@ export default function RecipeGrid() {
       for (const ri of ris) {
         quantities[ri.ingredient_id] = Number(ri.quantity_used);
       }
-      return {
-        id: r.id,
-        name: r.name,
-        size: r.size,
-        menu_price: r.menu_price,
-        quantities,
-      };
+      return { id: r.id, name: r.name, size: r.size, menu_price: r.menu_price, quantities };
     });
 
     setRecipes(gridRecipes);
@@ -64,33 +66,66 @@ export default function RecipeGrid() {
     fetchData();
   }, [fetchData]);
 
+  function getGroups(): RecipeGroup[] {
+    const groupMap = new Map<string, GridRecipe[]>();
+    for (const r of recipes) {
+      const list = groupMap.get(r.name) || [];
+      list.push(r);
+      groupMap.set(r.name, list);
+    }
+
+    return Array.from(groupMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([groupName, groupRecipes]) => {
+        // Collect all ingredient IDs used by any recipe in this group
+        const ingSet = new Set<string>();
+        for (const r of groupRecipes) {
+          for (const [ingId, qty] of Object.entries(r.quantities)) {
+            if (qty > 0) ingSet.add(ingId);
+          }
+        }
+        const ingredientIds = ingredients
+          .filter((i) => ingSet.has(i.id))
+          .map((i) => i.id);
+
+        // Sort by size
+        const sorted = groupRecipes.sort((a, b) => parseSize(a.size) - parseSize(b.size));
+
+        return { groupName, recipes: sorted, ingredientIds };
+      });
+  }
+
+  function parseSize(size: string | null): number {
+    if (!size) return 0;
+    const match = size.match(/(\d+)/);
+    return match ? parseInt(match[1], 10) : 0;
+  }
+
+  function getIngredient(id: string): Ingredient | undefined {
+    return ingredients.find((i) => i.id === id);
+  }
+
   function getCost(recipe: GridRecipe): number {
-    return ingredients.reduce((sum, ing) => {
-      const qty = recipe.quantities[ing.id] || 0;
+    return Object.entries(recipe.quantities).reduce((sum, [ingId, qty]) => {
+      const ing = getIngredient(ingId);
+      if (!ing || qty <= 0) return sum;
       return sum + qty * Number(ing.cost_per_recipe_unit);
     }, 0);
   }
 
-  // Debounced save for quantity changes
   function handleQuantityChange(recipeId: string, ingredientId: string, value: string) {
     const qty = parseFloat(value) || 0;
-
-    // Optimistic update
     setRecipes((prev) =>
-      prev.map((r) => {
-        if (r.id !== recipeId) return r;
-        return { ...r, quantities: { ...r.quantities, [ingredientId]: qty } };
-      })
+      prev.map((r) =>
+        r.id === recipeId ? { ...r, quantities: { ...r.quantities, [ingredientId]: qty } } : r
+      )
     );
-
-    // Debounce the save
     const key = `${recipeId}-${ingredientId}`;
     if (saveTimeouts.current[key]) clearTimeout(saveTimeouts.current[key]);
     saveTimeouts.current[key] = setTimeout(() => saveQuantity(recipeId, ingredientId, qty), 500);
   }
 
   async function saveQuantity(recipeId: string, ingredientId: string, qty: number) {
-    // Check if a recipe_ingredient row exists
     const { data: existing } = await supabase
       .from("recipe_ingredients")
       .select("id")
@@ -101,16 +136,11 @@ export default function RecipeGrid() {
     if (qty === 0 && existing) {
       await supabase.from("recipe_ingredients").delete().eq("id", existing.id);
     } else if (qty > 0 && existing) {
+      await supabase.from("recipe_ingredients").update({ quantity_used: qty }).eq("id", existing.id);
+    } else if (qty > 0 && !existing) {
       await supabase
         .from("recipe_ingredients")
-        .update({ quantity_used: qty })
-        .eq("id", existing.id);
-    } else if (qty > 0 && !existing) {
-      await supabase.from("recipe_ingredients").insert({
-        recipe_id: recipeId,
-        ingredient_id: ingredientId,
-        quantity_used: qty,
-      });
+        .insert({ recipe_id: recipeId, ingredient_id: ingredientId, quantity_used: qty });
     }
   }
 
@@ -119,26 +149,64 @@ export default function RecipeGrid() {
     setRecipes((prev) =>
       prev.map((r) => (r.id === recipeId ? { ...r, menu_price: price } : r))
     );
-
     const key = `price-${recipeId}`;
     if (saveTimeouts.current[key]) clearTimeout(saveTimeouts.current[key]);
     saveTimeouts.current[key] = setTimeout(async () => {
-      await supabase
-        .from("recipes")
-        .update({ menu_price: price })
-        .eq("id", recipeId);
+      await supabase.from("recipes").update({ menu_price: price }).eq("id", recipeId);
     }, 500);
   }
 
-  async function handleAddRow() {
-    if (!newRowName.trim()) return;
-    setSaving("new");
+  async function handleAddSizeVariant(groupName: string) {
+    if (!newSize.trim()) return;
+    setSaving("new-size");
+
+    // Find an existing recipe in this group to copy ingredients from
+    const template = recipes.find((r) => r.name === groupName);
+
+    const { data, error } = await supabase
+      .from("recipes")
+      .insert({ name: groupName, size: newSize.trim(), menu_price: null })
+      .select("id")
+      .single();
+
+    if (error || !data) {
+      console.error("Failed to add size variant:", error);
+      setSaving(null);
+      return;
+    }
+
+    // Copy ingredients from template with zero quantities
+    const newQuantities: Record<string, number> = {};
+    if (template) {
+      const riInserts = Object.keys(template.quantities)
+        .filter((ingId) => template.quantities[ingId] > 0)
+        .map((ingId) => {
+          newQuantities[ingId] = 0;
+          return { recipe_id: data.id, ingredient_id: ingId, quantity_used: 0 };
+        });
+      if (riInserts.length > 0) {
+        await supabase.from("recipe_ingredients").insert(riInserts);
+      }
+    }
+
+    setRecipes((prev) => [
+      ...prev,
+      { id: data.id, name: groupName, size: newSize.trim(), menu_price: null, quantities: newQuantities },
+    ]);
+    setNewSize("");
+    setAddingTo(null);
+    setSaving(null);
+  }
+
+  async function handleAddNewGroup() {
+    if (!newGroupName.trim()) return;
+    setSaving("new-group");
 
     const { data, error } = await supabase
       .from("recipes")
       .insert({
-        name: newRowName.trim(),
-        size: newRowSize.trim() || null,
+        name: newGroupName.trim(),
+        size: newGroupSize.trim() || null,
         menu_price: null,
       })
       .select("id")
@@ -154,15 +222,15 @@ export default function RecipeGrid() {
       ...prev,
       {
         id: data.id,
-        name: newRowName.trim(),
-        size: newRowSize.trim() || null,
+        name: newGroupName.trim(),
+        size: newGroupSize.trim() || null,
         menu_price: null,
         quantities: {},
-        isNew: true,
       },
     ]);
-    setNewRowName("");
-    setNewRowSize("");
+    setNewGroupName("");
+    setNewGroupSize("");
+    setShowNewGroup(false);
     setSaving(null);
   }
 
@@ -173,6 +241,28 @@ export default function RecipeGrid() {
     setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
   }
 
+  // Add a new ingredient column to a group
+  async function handleAddIngredientToGroup(groupName: string, ingredientId: string) {
+    // Add zero-quantity rows for all recipes in this group
+    const groupRecipes = recipes.filter((r) => r.name === groupName);
+    const inserts = groupRecipes.map((r) => ({
+      recipe_id: r.id,
+      ingredient_id: ingredientId,
+      quantity_used: 0,
+    }));
+
+    if (inserts.length > 0) {
+      await supabase.from("recipe_ingredients").insert(inserts);
+    }
+
+    // Update local state
+    setRecipes((prev) =>
+      prev.map((r) =>
+        r.name === groupName ? { ...r, quantities: { ...r.quantities, [ingredientId]: 0 } } : r
+      )
+    );
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
@@ -180,38 +270,6 @@ export default function RecipeGrid() {
       </div>
     );
   }
-
-  // Group recipes by name, sort by size within each group
-  function getSortedGroupedRecipes(): { groupName: string; recipes: GridRecipe[] }[] {
-    const groups = new Map<string, GridRecipe[]>();
-    for (const r of recipes) {
-      const list = groups.get(r.name) || [];
-      list.push(r);
-      groups.set(r.name, list);
-    }
-
-    // Sort groups alphabetically by name
-    const sortedGroups = Array.from(groups.entries())
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([groupName, groupRecipes]) => ({
-        groupName,
-        recipes: groupRecipes.sort((a, b) => {
-          const sizeA = parseSize(a.size);
-          const sizeB = parseSize(b.size);
-          return sizeA - sizeB;
-        }),
-      }));
-
-    return sortedGroups;
-  }
-
-  function parseSize(size: string | null): number {
-    if (!size) return 0;
-    const match = size.match(/(\d+)/);
-    return match ? parseInt(match[1], 10) : 0;
-  }
-
-  const groupedRecipes = getSortedGroupedRecipes();
 
   if (ingredients.length === 0) {
     return (
@@ -227,165 +285,267 @@ export default function RecipeGrid() {
     );
   }
 
+  const groups = getGroups();
+
+  // Ingredients not yet used by a group
+  function getAvailableIngredients(usedIds: string[]): Ingredient[] {
+    return ingredients.filter((i) => !usedIds.includes(i.id));
+  }
+
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm border-collapse">
-        <thead>
-          <tr className="bg-brew-50">
-            <th className="sticky left-0 z-10 bg-brew-50 px-3 py-2 text-left font-medium text-brew-600 border-b border-brew-200 min-w-[140px]">
-              Recipe
-            </th>
-            <th className="px-3 py-2 text-left font-medium text-brew-600 border-b border-brew-200 min-w-[70px]">
-              Size
-            </th>
-            {ingredients.map((ing) => (
-              <th
-                key={ing.id}
-                className="px-2 py-2 text-center font-medium text-brew-600 border-b border-brew-200 min-w-[70px]"
-              >
-                <div className="text-xs leading-tight">{ing.name}</div>
-                <div className="text-[10px] text-brew-400 font-normal">({ing.recipe_unit})</div>
-              </th>
-            ))}
-            <th className="px-3 py-2 text-right font-medium text-brew-600 border-b border-brew-200 min-w-[80px]">
-              COGS
-            </th>
-            <th className="px-3 py-2 text-right font-medium text-brew-600 border-b border-brew-200 min-w-[80px]">
-              Price
-            </th>
-            <th className="px-3 py-2 text-right font-medium text-brew-600 border-b border-brew-200 min-w-[70px]">
-              Margin
-            </th>
-            <th className="px-2 py-2 border-b border-brew-200 w-[40px]"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {groupedRecipes.map((group) => (
-            <React.Fragment key={group.groupName}>
-              {/* Group header - only show if there are multiple groups or multiple sizes */}
-              {(groupedRecipes.length > 1 || group.recipes.length > 1) && (
-                <tr className="bg-brew-100/50">
-                  <td
-                    colSpan={ingredients.length + 6}
-                    className="sticky left-0 z-10 bg-brew-100/50 px-3 py-1.5 text-xs font-semibold text-brew-600 tracking-wide uppercase"
+    <div className="space-y-6">
+      {groups.map((group) => {
+        const groupIngs = group.ingredientIds
+          .map((id) => getIngredient(id))
+          .filter(Boolean) as Ingredient[];
+        const available = getAvailableIngredients(group.ingredientIds);
+
+        return (
+          <div key={group.groupName} className="rounded-lg border border-brew-200 bg-white overflow-hidden">
+            {/* Group header */}
+            <div className="bg-brew-100/60 px-4 py-2 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-brew-700 uppercase tracking-wide">
+                {group.groupName}
+              </h3>
+              <div className="flex items-center gap-2">
+                {available.length > 0 && (
+                  <select
+                    onChange={(e) => {
+                      if (e.target.value) {
+                        handleAddIngredientToGroup(group.groupName, e.target.value);
+                        e.target.value = "";
+                      }
+                    }}
+                    className="rounded border border-brew-200 bg-white px-2 py-1 text-xs text-brew-600 focus:outline-none"
+                    defaultValue=""
                   >
-                    {group.groupName}
-                  </td>
-                </tr>
-              )}
-              {group.recipes.map((recipe) => {
-                const cost = getCost(recipe);
-                const price = Number(recipe.menu_price) || 0;
-                const margin = price > 0 ? calculateMargin(price, cost) : null;
-                const marginColor =
-                  margin === null
-                    ? "text-brew-400"
-                    : margin >= 65
-                    ? "text-margin-good"
-                    : margin >= 50
-                    ? "text-margin-warn"
-                    : "text-margin-bad";
+                    <option value="" disabled>
+                      + Add ingredient column
+                    </option>
+                    {available.map((ing) => (
+                      <option key={ing.id} value={ing.id}>
+                        {ing.name}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+            </div>
 
-                const showName = group.recipes.length === 1 && groupedRecipes.length <= 1;
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm border-collapse">
+                <thead>
+                  <tr className="bg-brew-50/50">
+                    <th className="px-3 py-2 text-left font-medium text-brew-500 text-xs min-w-[80px]">
+                      Size
+                    </th>
+                    {groupIngs.map((ing) => (
+                      <th
+                        key={ing.id}
+                        className="px-2 py-2 text-center font-medium text-brew-500 text-xs min-w-[70px]"
+                      >
+                        <div className="leading-tight">{ing.name}</div>
+                        <div className="text-[10px] text-brew-400 font-normal">({ing.recipe_unit})</div>
+                      </th>
+                    ))}
+                    <th className="px-3 py-2 text-right font-medium text-brew-500 text-xs min-w-[70px]">
+                      COGS
+                    </th>
+                    <th className="px-3 py-2 text-right font-medium text-brew-500 text-xs min-w-[70px]">
+                      Price
+                    </th>
+                    <th className="px-3 py-2 text-right font-medium text-brew-500 text-xs min-w-[60px]">
+                      Margin
+                    </th>
+                    <th className="px-2 py-2 w-[30px]"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {group.recipes.map((recipe) => {
+                    const cost = getCost(recipe);
+                    const price = Number(recipe.menu_price) || 0;
+                    const margin = price > 0 ? calculateMargin(price, cost) : null;
+                    const marginColor =
+                      margin === null
+                        ? "text-brew-400"
+                        : margin >= 65
+                        ? "text-margin-good"
+                        : margin >= 50
+                        ? "text-margin-warn"
+                        : "text-margin-bad";
 
-                return (
-                  <tr key={recipe.id} className="border-b border-brew-100 hover:bg-brew-50/30">
-                    <td className="sticky left-0 z-10 bg-white px-3 py-1.5 font-medium text-brew-800">
-                      {showName ? recipe.name : (
-                        <span className="pl-2 text-brew-600">
-                          {recipe.size || recipe.name}
-                        </span>
+                    return (
+                      <tr key={recipe.id} className="border-t border-brew-100 hover:bg-brew-50/30">
+                        <td className="px-3 py-1.5 font-medium text-brew-700 text-sm">
+                          {recipe.size || "—"}
+                        </td>
+                        {groupIngs.map((ing) => (
+                          <td key={ing.id} className="px-1 py-1">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={recipe.quantities[ing.id] || ""}
+                              onChange={(e) =>
+                                handleQuantityChange(recipe.id, ing.id, e.target.value)
+                              }
+                              placeholder="0"
+                              className="w-full min-w-[50px] rounded border border-brew-100 px-1.5 py-1 text-center text-sm focus:border-brew-400 focus:outline-none hover:border-brew-200"
+                            />
+                          </td>
+                        ))}
+                        <td className="px-3 py-1.5 text-right font-medium whitespace-nowrap text-sm">
+                          {formatCost(cost)}
+                        </td>
+                        <td className="px-1 py-1">
+                          <input
+                            type="number"
+                            step="0.01"
+                            min="0"
+                            value={recipe.menu_price ?? ""}
+                            onChange={(e) => handleMenuPriceChange(recipe.id, e.target.value)}
+                            placeholder="0.00"
+                            className="w-full min-w-[55px] rounded border border-brew-100 px-1.5 py-1 text-right text-sm focus:border-brew-400 focus:outline-none hover:border-brew-200"
+                          />
+                        </td>
+                        <td
+                          className={`px-3 py-1.5 text-right font-semibold whitespace-nowrap text-sm ${marginColor}`}
+                        >
+                          {margin !== null ? formatPercent(margin) : "—"}
+                        </td>
+                        <td className="px-1 py-1.5 text-center">
+                          <button
+                            onClick={() => handleDeleteRow(recipe.id)}
+                            className="text-xs text-red-300 hover:text-red-500"
+                            title="Delete this size"
+                          >
+                            ✕
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {/* Add size variant row */}
+                  <tr className="border-t border-brew-200 bg-brew-50/30">
+                    <td colSpan={groupIngs.length + 5} className="px-3 py-1.5">
+                      {addingTo === group.groupName ? (
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={newSize}
+                            onChange={(e) => setNewSize(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") handleAddSizeVariant(group.groupName);
+                              if (e.key === "Escape") {
+                                setAddingTo(null);
+                                setNewSize("");
+                              }
+                            }}
+                            placeholder="e.g. 20 oz"
+                            list={`sizes-${group.groupName}`}
+                            className="w-28 rounded border border-brew-200 px-2 py-1 text-xs focus:border-brew-400 focus:outline-none"
+                            autoFocus
+                          />
+                          <datalist id={`sizes-${group.groupName}`}>
+                            {COMMON_SIZES.map((s) => (
+                              <option key={s} value={s} />
+                            ))}
+                          </datalist>
+                          <button
+                            onClick={() => handleAddSizeVariant(group.groupName)}
+                            disabled={!newSize.trim() || saving === "new-size"}
+                            className="rounded bg-brew-800 px-2 py-1 text-xs font-medium text-white hover:bg-brew-700 disabled:opacity-50"
+                          >
+                            Add
+                          </button>
+                          <button
+                            onClick={() => {
+                              setAddingTo(null);
+                              setNewSize("");
+                            }}
+                            className="text-xs text-brew-400 hover:text-brew-600"
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={() => setAddingTo(group.groupName)}
+                          className="text-xs text-brew-500 hover:text-brew-700 font-medium"
+                        >
+                          + Add size
+                        </button>
                       )}
                     </td>
-                    <td className="px-3 py-1.5 text-brew-400 text-xs">
-                      {showName ? (recipe.size || "—") : (recipe.size ? "" : "—")}
-                    </td>
-                    {ingredients.map((ing) => (
-                      <td key={ing.id} className="px-1 py-1">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={recipe.quantities[ing.id] || ""}
-                          onChange={(e) => handleQuantityChange(recipe.id, ing.id, e.target.value)}
-                          placeholder="0"
-                          className="w-full min-w-[50px] rounded border border-brew-100 px-1.5 py-1 text-center text-sm focus:border-brew-400 focus:outline-none hover:border-brew-200"
-                        />
-                      </td>
-                    ))}
-                    <td className="px-3 py-1.5 text-right font-medium whitespace-nowrap">
-                      {formatCost(cost)}
-                    </td>
-                    <td className="px-1 py-1">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={recipe.menu_price ?? ""}
-                        onChange={(e) => handleMenuPriceChange(recipe.id, e.target.value)}
-                        placeholder="0.00"
-                        className="w-full min-w-[60px] rounded border border-brew-100 px-1.5 py-1 text-right text-sm focus:border-brew-400 focus:outline-none hover:border-brew-200"
-                      />
-                    </td>
-                    <td className={`px-3 py-1.5 text-right font-semibold whitespace-nowrap ${marginColor}`}>
-                      {margin !== null ? formatPercent(margin) : "—"}
-                    </td>
-                    <td className="px-1 py-1.5 text-center">
-                      <button
-                        onClick={() => handleDeleteRow(recipe.id)}
-                        className="text-xs text-red-300 hover:text-red-500"
-                        title="Delete recipe"
-                      >
-                        ✕
-                      </button>
-                    </td>
                   </tr>
-                );
-              })}
-            </React.Fragment>
-          ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        );
+      })}
 
-          {/* Add new row */}
-          <tr className="border-t-2 border-brew-200 bg-brew-50/50">
-            <td className="sticky left-0 z-10 bg-brew-50/50 px-3 py-2">
-              <input
-                type="text"
-                value={newRowName}
-                onChange={(e) => setNewRowName(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && newRowName.trim()) handleAddRow();
-                }}
-                placeholder="New recipe name..."
-                className="w-full rounded border border-brew-200 px-2 py-1 text-sm focus:border-brew-400 focus:outline-none"
-              />
-            </td>
-            <td className="px-3 py-2">
-              <input
-                type="text"
-                value={newRowSize}
-                onChange={(e) => setNewRowSize(e.target.value)}
-                placeholder="Size"
-                list="grid-sizes"
-                className="w-full rounded border border-brew-200 px-2 py-1 text-sm focus:border-brew-400 focus:outline-none"
-              />
-              <datalist id="grid-sizes">
-                {COMMON_SIZES.map((s) => (
-                  <option key={s} value={s} />
-                ))}
-              </datalist>
-            </td>
-            <td colSpan={ingredients.length + 3} className="px-3 py-2">
-              <button
-                onClick={handleAddRow}
-                disabled={!newRowName.trim() || saving === "new"}
-                className="rounded bg-brew-800 px-3 py-1 text-xs font-medium text-white hover:bg-brew-700 disabled:opacity-50 transition-colors"
-              >
-                {saving === "new" ? "Adding..." : "+ Add Row"}
-              </button>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+      {/* Add new recipe group */}
+      <div className="rounded-lg border border-dashed border-brew-300 bg-white p-4">
+        {showNewGroup ? (
+          <div className="flex items-center gap-3">
+            <input
+              type="text"
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newGroupName.trim()) handleAddNewGroup();
+                if (e.key === "Escape") {
+                  setShowNewGroup(false);
+                  setNewGroupName("");
+                  setNewGroupSize("");
+                }
+              }}
+              placeholder="Recipe name (e.g. Mocha)"
+              className="w-48 rounded border border-brew-200 px-3 py-2 text-sm focus:border-brew-400 focus:outline-none"
+              autoFocus
+            />
+            <input
+              type="text"
+              value={newGroupSize}
+              onChange={(e) => setNewGroupSize(e.target.value)}
+              placeholder="First size (e.g. 12 oz)"
+              list="new-group-sizes"
+              className="w-36 rounded border border-brew-200 px-3 py-2 text-sm focus:border-brew-400 focus:outline-none"
+            />
+            <datalist id="new-group-sizes">
+              {COMMON_SIZES.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
+            <button
+              onClick={handleAddNewGroup}
+              disabled={!newGroupName.trim() || saving === "new-group"}
+              className="rounded bg-brew-800 px-4 py-2 text-sm font-medium text-white hover:bg-brew-700 disabled:opacity-50"
+            >
+              {saving === "new-group" ? "Adding..." : "Add Recipe"}
+            </button>
+            <button
+              onClick={() => {
+                setShowNewGroup(false);
+                setNewGroupName("");
+                setNewGroupSize("");
+              }}
+              className="text-sm text-brew-400 hover:text-brew-600"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowNewGroup(true)}
+            className="w-full text-center text-sm text-brew-500 hover:text-brew-700 font-medium py-2"
+          >
+            + Add New Recipe
+          </button>
+        )}
+      </div>
     </div>
   );
 }
