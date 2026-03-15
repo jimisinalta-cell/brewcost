@@ -10,20 +10,23 @@ import {
   formatPercent,
   calculateMargin,
 } from "@/lib/utils";
+import RecipeGrid from "@/components/RecipeGrid";
 
 interface RecipeRow extends Recipe {
   total_cost: number;
   margin: number | null;
 }
 
+type ViewMode = "cards" | "grid";
+
 export default function DashboardPage() {
   const router = useRouter();
+  const [view, setView] = useState<ViewMode>("cards");
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState<string | null>(null);
 
   const fetchRecipes = useCallback(async () => {
-    // Fetch recipes with their ingredients
     const { data: recipesData, error: recipesError } = await supabase
       .from("recipes")
       .select("*")
@@ -41,7 +44,6 @@ export default function DashboardPage() {
       return;
     }
 
-    // Fetch all recipe_ingredients with ingredient details
     const { data: riData } = await supabase
       .from("recipe_ingredients")
       .select("*, ingredient:ingredients(*)");
@@ -80,7 +82,6 @@ export default function DashboardPage() {
   async function handleDuplicate(recipe: RecipeRow) {
     setDuplicating(recipe.id);
     try {
-      // Create new recipe with same name, blank size so user sets it
       const { data: newRecipe, error: recipeError } = await supabase
         .from("recipes")
         .insert({
@@ -97,7 +98,6 @@ export default function DashboardPage() {
         return;
       }
 
-      // Copy all recipe_ingredients
       const { data: existingIngredients } = await supabase
         .from("recipe_ingredients")
         .select("ingredient_id, quantity_used")
@@ -113,7 +113,6 @@ export default function DashboardPage() {
         );
       }
 
-      // Navigate to edit the new recipe
       router.push(`/recipes/${newRecipe.id}`);
     } catch (err) {
       console.error("Duplicate error:", err);
@@ -131,14 +130,6 @@ export default function DashboardPage() {
     setRecipes((prev) => prev.filter((r) => r.id !== id));
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-20">
-        <div className="text-brew-500">Loading dashboard...</div>
-      </div>
-    );
-  }
-
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
@@ -148,15 +139,50 @@ export default function DashboardPage() {
             All your recipes at a glance.
           </p>
         </div>
-        <a
-          href="/recipes/new"
-          className="rounded-lg bg-brew-800 px-4 py-2 text-sm font-medium text-white hover:bg-brew-700 transition-colors"
-        >
-          + New Recipe
-        </a>
+        <div className="flex items-center gap-3">
+          {/* View toggle */}
+          <div className="flex rounded-lg border border-brew-200 bg-white overflow-hidden">
+            <button
+              onClick={() => setView("cards")}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                view === "cards"
+                  ? "bg-brew-800 text-white"
+                  : "text-brew-500 hover:text-brew-800"
+              }`}
+            >
+              Cards
+            </button>
+            <button
+              onClick={() => setView("grid")}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                view === "grid"
+                  ? "bg-brew-800 text-white"
+                  : "text-brew-500 hover:text-brew-800"
+              }`}
+            >
+              Grid
+            </button>
+          </div>
+          {view === "cards" && (
+            <a
+              href="/recipes/new"
+              className="rounded-lg bg-brew-800 px-4 py-2 text-sm font-medium text-white hover:bg-brew-700 transition-colors"
+            >
+              + New Recipe
+            </a>
+          )}
+        </div>
       </div>
 
-      {recipes.length === 0 ? (
+      {view === "grid" ? (
+        <div className="rounded-lg border border-brew-200 bg-white overflow-hidden">
+          <RecipeGrid />
+        </div>
+      ) : loading ? (
+        <div className="flex items-center justify-center py-20">
+          <div className="text-brew-500">Loading dashboard...</div>
+        </div>
+      ) : recipes.length === 0 ? (
         <div className="rounded-lg border border-dashed border-brew-300 bg-white py-16 text-center">
           <p className="text-brew-500 text-lg">No recipes yet</p>
           <p className="text-brew-400 text-sm mt-1">
