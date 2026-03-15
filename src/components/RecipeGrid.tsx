@@ -271,6 +271,29 @@ export default function RecipeGrid() {
     setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
   }
 
+  // Remove an ingredient column from a group
+  async function handleRemoveIngredientFromGroup(groupName: string, ingredientId: string) {
+    const groupRecipes = recipes.filter((r) => r.name === groupName);
+
+    // Delete all recipe_ingredient rows for this ingredient in this group
+    for (const r of groupRecipes) {
+      await supabase
+        .from("recipe_ingredients")
+        .delete()
+        .eq("recipe_id", r.id)
+        .eq("ingredient_id", ingredientId);
+    }
+
+    // Update local state — remove this ingredient key from quantities
+    setRecipes((prev) =>
+      prev.map((r) => {
+        if (r.name !== groupName) return r;
+        const { [ingredientId]: _, ...rest } = r.quantities;
+        return { ...r, quantities: rest };
+      })
+    );
+  }
+
   // Add a new ingredient column to a group
   async function handleAddIngredientToGroup(groupName: string, ingredientId: string) {
     // Add zero-quantity rows for all recipes in this group
@@ -357,10 +380,22 @@ export default function RecipeGrid() {
                     {groupIngs.map((ing) => (
                       <th
                         key={ing.id}
-                        className="px-2 py-2 text-center font-medium text-brew-500 text-xs min-w-[70px]"
+                        className="px-2 py-2 text-center font-medium text-brew-500 text-xs min-w-[70px] group/col"
                       >
-                        <div className="leading-tight">{ing.name}</div>
-                        <div className="text-[10px] text-brew-400 font-normal">({ing.recipe_unit})</div>
+                        <div className="flex items-start justify-center gap-0.5">
+                          <div>
+                            <div className="leading-tight">{ing.name}</div>
+                            <div className="text-[10px] text-brew-400 font-normal">({ing.recipe_unit})</div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveIngredientFromGroup(group.groupName, ing.id)}
+                            className="opacity-0 group-hover/col:opacity-100 text-[10px] text-red-300 hover:text-red-500 -mt-0.5 ml-0.5 transition-opacity"
+                            title={`Remove ${ing.name} from ${group.groupName}`}
+                          >
+                            ✕
+                          </button>
+                        </div>
                       </th>
                     ))}
                     <th className="px-3 py-2 text-right font-medium text-brew-500 text-xs min-w-[70px]">
