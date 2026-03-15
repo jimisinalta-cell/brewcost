@@ -249,7 +249,7 @@ export default function IngredientsPage() {
               </label>
               <input
                 type="number"
-                step="0.01"
+                step="0.0001"
                 min="0"
                 value={newPurchasePrice}
                 onChange={(e) => setNewPurchasePrice(e.target.value)}
@@ -330,7 +330,7 @@ export default function IngredientsPage() {
                         $
                         <input
                           type="number"
-                          step="0.01"
+                          step="0.0001"
                           min="0"
                           value={editPrice}
                           onChange={(e) => setEditPrice(e.target.value)}
