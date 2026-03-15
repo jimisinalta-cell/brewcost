@@ -19,6 +19,36 @@ interface RecipeGroup {
   ingredientIds: string[]; // only ingredients used by this group
 }
 
+function AddIngredientSelect({
+  available,
+  onAdd,
+}: {
+  available: Ingredient[];
+  onAdd: (ingId: string) => void;
+}) {
+  const [value, setValue] = useState("");
+  return (
+    <select
+      value={value}
+      onChange={(e) => {
+        const ingId = e.target.value;
+        if (ingId) {
+          onAdd(ingId);
+          setValue("");
+        }
+      }}
+      className="rounded border border-brew-200 bg-white px-2 py-1 text-xs text-brew-600 focus:outline-none"
+    >
+      <option value="">+ Add ingredient column</option>
+      {available.map((ing) => (
+        <option key={ing.id} value={ing.id}>
+          {ing.name}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 export default function RecipeGrid() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [recipes, setRecipes] = useState<GridRecipe[]>([]);
@@ -77,11 +107,11 @@ export default function RecipeGrid() {
     return Array.from(groupMap.entries())
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([groupName, groupRecipes]) => {
-        // Collect all ingredient IDs used by any recipe in this group
+        // Collect all ingredient IDs referenced by any recipe in this group (including qty 0)
         const ingSet = new Set<string>();
         for (const r of groupRecipes) {
-          for (const [ingId, qty] of Object.entries(r.quantities)) {
-            if (qty > 0) ingSet.add(ingId);
+          for (const ingId of Object.keys(r.quantities)) {
+            ingSet.add(ingId);
           }
         }
         const ingredientIds = ingredients
@@ -309,25 +339,10 @@ export default function RecipeGrid() {
               </h3>
               <div className="flex items-center gap-2">
                 {available.length > 0 && (
-                  <select
-                    onChange={(e) => {
-                      if (e.target.value) {
-                        handleAddIngredientToGroup(group.groupName, e.target.value);
-                        e.target.value = "";
-                      }
-                    }}
-                    className="rounded border border-brew-200 bg-white px-2 py-1 text-xs text-brew-600 focus:outline-none"
-                    defaultValue=""
-                  >
-                    <option value="" disabled>
-                      + Add ingredient column
-                    </option>
-                    {available.map((ing) => (
-                      <option key={ing.id} value={ing.id}>
-                        {ing.name}
-                      </option>
-                    ))}
-                  </select>
+                  <AddIngredientSelect
+                    available={available}
+                    onAdd={(ingId) => handleAddIngredientToGroup(group.groupName, ingId)}
+                  />
                 )}
               </div>
             </div>
