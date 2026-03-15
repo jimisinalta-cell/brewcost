@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { Ingredient, Recipe, RecipeIngredient } from "@/types/database";
 import {
@@ -16,8 +17,10 @@ interface RecipeRow extends Recipe {
 }
 
 export default function DashboardPage() {
+  const router = useRouter();
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [duplicating, setDuplicating] = useState<string | null>(null);
 
   const fetchRecipes = useCallback(async () => {
     // Fetch recipes with their ingredients
@@ -73,6 +76,50 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchRecipes();
   }, [fetchRecipes]);
+
+  async function handleDuplicate(recipe: RecipeRow) {
+    setDuplicating(recipe.id);
+    try {
+      // Create new recipe with same name, blank size so user sets it
+      const { data: newRecipe, error: recipeError } = await supabase
+        .from("recipes")
+        .insert({
+          name: recipe.name,
+          size: null,
+          menu_price: recipe.menu_price,
+        })
+        .select("id")
+        .single();
+
+      if (recipeError || !newRecipe) {
+        console.error("Failed to duplicate recipe:", recipeError);
+        setDuplicating(null);
+        return;
+      }
+
+      // Copy all recipe_ingredients
+      const { data: existingIngredients } = await supabase
+        .from("recipe_ingredients")
+        .select("ingredient_id, quantity_used")
+        .eq("recipe_id", recipe.id);
+
+      if (existingIngredients && existingIngredients.length > 0) {
+        await supabase.from("recipe_ingredients").insert(
+          existingIngredients.map((ri) => ({
+            recipe_id: newRecipe.id,
+            ingredient_id: ri.ingredient_id,
+            quantity_used: ri.quantity_used,
+          }))
+        );
+      }
+
+      // Navigate to edit the new recipe
+      router.push(`/recipes/${newRecipe.id}`);
+    } catch (err) {
+      console.error("Duplicate error:", err);
+      setDuplicating(null);
+    }
+  }
 
   async function handleDelete(id: string) {
     if (!confirm("Delete this recipe?")) return;
@@ -160,6 +207,13 @@ export default function DashboardPage() {
                     >
                       Edit
                     </a>
+                    <button
+                      onClick={() => handleDuplicate(recipe)}
+                      disabled={duplicating === recipe.id}
+                      className="text-brew-500 hover:text-brew-800 hover:underline disabled:opacity-50"
+                    >
+                      {duplicating === recipe.id ? "Copying..." : "Duplicate"}
+                    </button>
                     <button
                       onClick={() => handleDelete(recipe.id)}
                       className="text-red-400 hover:text-red-600 hover:underline"
