@@ -5,6 +5,7 @@ import { supabase } from "@/lib/supabase";
 import { Ingredient, Recipe, RecipeIngredient } from "@/types/database";
 import {
   formatCurrency,
+  formatCost,
   formatPercent,
   calculateMargin,
 } from "@/lib/utils";
@@ -166,7 +167,7 @@ export default function DashboardPage() {
                   <div className="flex justify-between">
                     <span className="text-brew-500">COGS</span>
                     <span className="font-medium">
-                      {formatCurrency(recipe.total_cost)}
+                      {formatCost(recipe.total_cost)}
                     </span>
                   </div>
                   <div className="flex justify-between">

@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { Ingredient, Recipe, RecipeIngredient } from "@/types/database";
 import {
   formatCurrency,
+  formatCost,
   formatPercent,
   calculateMargin,
   calculateFoodCost,
@@ -307,7 +308,7 @@ export default function RecipeForm({
                           : "—"}
                       </div>
                       <div className="sm:col-span-2 text-right text-sm font-medium">
-                        {formatCurrency(lineCost)}
+                        {formatCost(lineCost)}
                       </div>
                       <div className="sm:col-span-1 text-right">
                         <button
@@ -336,7 +337,7 @@ export default function RecipeForm({
               <div className="flex justify-between text-sm">
                 <span className="text-brew-500">Total COGS</span>
                 <span className="font-semibold text-lg">
-                  {formatCurrency(totalCost)}
+                  {formatCost(totalCost)}
                 </span>
               </div>
               {price > 0 && (
