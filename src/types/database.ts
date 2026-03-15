@@ -60,7 +60,7 @@ export type RecipeUnit = "oz" | "ml" | "g" | "each";
 export const PURCHASE_UNITS: { value: PurchaseUnit; label: string }[] = [
   { value: "gallon", label: "Gallon" },
   { value: "half_gallon", label: "Half Gallon" },
-  { value: "quart", label: "Quart" },
+  { value: "quart", label: "Quart (1/4 Gal)" },
   { value: "liter", label: "Liter" },
   { value: "ml", label: "mL" },
   { value: "oz", label: "oz" },
