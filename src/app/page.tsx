@@ -147,7 +147,12 @@ export default function DashboardPage() {
                 className={`rounded-lg border border-brew-200 bg-white p-4 border-l-4 ${borderColor} hover:shadow-sm transition-shadow`}
               >
                 <div className="mb-3 flex items-start justify-between">
-                  <h3 className="font-semibold text-brew-800">{recipe.name}</h3>
+                  <div>
+                    <h3 className="font-semibold text-brew-800">{recipe.name}</h3>
+                    {recipe.size && (
+                      <span className="text-xs text-brew-400">{recipe.size}</span>
+                    )}
+                  </div>
                   <div className="flex gap-2 text-xs">
                     <a
                       href={`/recipes/${recipe.id}`}

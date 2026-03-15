@@ -14,10 +14,13 @@ export interface Recipe {
   id: string;
   user_id: string | null;
   name: string;
+  size: string | null;
   menu_price: number | null;
   created_at: string;
   updated_at: string;
 }
+
+export const COMMON_SIZES = ["8 oz", "12 oz", "16 oz", "20 oz", "24 oz"];
 
 export interface RecipeIngredient {
   id: string;

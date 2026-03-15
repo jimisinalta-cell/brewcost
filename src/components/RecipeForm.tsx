@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { Ingredient, Recipe, RecipeIngredient } from "@/types/database";
+import { Ingredient, Recipe, RecipeIngredient, COMMON_SIZES } from "@/types/database";
 import {
   formatCurrency,
   formatCost,
@@ -26,6 +26,7 @@ export default function RecipeForm({
 }) {
   const router = useRouter();
   const [name, setName] = useState(existingRecipe?.name || "");
+  const [size, setSize] = useState(existingRecipe?.size || "");
   const [menuPrice, setMenuPrice] = useState(
     existingRecipe?.menu_price?.toString() || ""
   );
@@ -125,6 +126,7 @@ export default function RecipeForm({
           .from("recipes")
           .update({
             name: name.trim(),
+            size: size.trim() || null,
             menu_price: price || null,
           })
           .eq("id", existingRecipe.id);
@@ -139,6 +141,7 @@ export default function RecipeForm({
           .from("recipes")
           .insert({
             name: name.trim(),
+            size: size.trim() || null,
             menu_price: price || null,
           })
           .select("id")
@@ -188,7 +191,7 @@ export default function RecipeForm({
         {/* Left column - recipe details */}
         <div className="lg:col-span-2 space-y-4">
           <div className="rounded-lg border border-brew-200 bg-white p-4">
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="grid gap-4 sm:grid-cols-3">
               <div>
                 <label className="mb-1 block text-xs font-medium text-brew-600">
                   Recipe Name
@@ -197,10 +200,30 @@ export default function RecipeForm({
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Iced Latte"
+                  placeholder="e.g. Latte"
                   className="w-full rounded-md border border-brew-200 px-3 py-2 text-sm focus:border-brew-500 focus:outline-none"
                   required
                 />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-brew-600">
+                  Size
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={size}
+                    onChange={(e) => setSize(e.target.value)}
+                    placeholder="e.g. 16 oz"
+                    list="common-sizes"
+                    className="w-full rounded-md border border-brew-200 px-3 py-2 text-sm focus:border-brew-500 focus:outline-none"
+                  />
+                  <datalist id="common-sizes">
+                    {COMMON_SIZES.map((s) => (
+                      <option key={s} value={s} />
+                    ))}
+                  </datalist>
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-brew-600">
