@@ -380,22 +380,22 @@ export default function RecipeGrid() {
                     {groupIngs.map((ing) => (
                       <th
                         key={ing.id}
-                        className="px-2 py-2 text-center font-medium text-brew-500 text-xs min-w-[70px] group/col"
+                        className="px-2 py-2 text-center font-medium text-brew-500 text-xs min-w-[70px]"
                       >
-                        <div className="flex items-start justify-center gap-0.5">
-                          <div>
-                            <div className="leading-tight">{ing.name}</div>
-                            <div className="text-[10px] text-brew-400 font-normal">({ing.recipe_unit})</div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveIngredientFromGroup(group.groupName, ing.id)}
-                            className="opacity-0 group-hover/col:opacity-100 text-[10px] text-red-300 hover:text-red-500 -mt-0.5 ml-0.5 transition-opacity"
-                            title={`Remove ${ing.name} from ${group.groupName}`}
-                          >
-                            ✕
-                          </button>
-                        </div>
+                        <div className="leading-tight">{ing.name}</div>
+                        <div className="text-[10px] text-brew-400 font-normal">({ing.recipe_unit})</div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (confirm(`Remove "${ing.name}" from all ${group.groupName} recipes?`)) {
+                              handleRemoveIngredientFromGroup(group.groupName, ing.id);
+                            }
+                          }}
+                          className="mt-0.5 text-[10px] text-red-300 hover:text-red-500"
+                          title={`Remove ${ing.name} column`}
+                        >
+                          remove
+                        </button>
                       </th>
                     ))}
                     <th className="px-3 py-2 text-right font-medium text-brew-500 text-xs min-w-[70px]">
