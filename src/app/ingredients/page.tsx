@@ -173,17 +173,16 @@ export default function IngredientsPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Ingredient Library</h1>
-          <p className="text-sm text-brew-500 mt-1">
-            Enter what you pay. We calculate the cost per recipe unit
-            automatically.
+          <h1 className="text-xl sm:text-2xl font-bold">Ingredient Library</h1>
+          <p className="text-sm text-brew-500 mt-0.5">
+            Enter what you pay. We calculate the cost per recipe unit.
           </p>
         </div>
         <button
           onClick={() => setShowForm(!showForm)}
-          className="rounded-lg bg-brew-800 px-4 py-2 text-sm font-medium text-white hover:bg-brew-700 transition-colors"
+          className="self-start rounded-lg bg-brew-800 px-4 py-2 text-sm font-medium text-white hover:bg-brew-700 transition-colors whitespace-nowrap"
         >
           {showForm ? "Cancel" : "+ Add Ingredient"}
         </button>
@@ -317,16 +316,16 @@ export default function IngredientsPage() {
               key={ing.id}
               className="rounded-lg border border-brew-200 bg-white p-4 hover:shadow-sm transition-shadow"
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-brew-800">{ing.name}</h3>
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold text-brew-800 text-sm sm:text-base">{ing.name}</h3>
                   <p className="text-sm text-brew-400 mt-0.5">
                     {ing.purchase_unit === "case"
                       ? `Case of ${Number(ing.purchase_size)}`
                       : `${Number(ing.purchase_size)} ${getPurchaseLabel(ing.purchase_unit)}`}{" "}
                     @{" "}
                     {editingId === ing.id ? (
-                      <span className="inline-flex items-center gap-1">
+                      <span className="inline-flex items-center gap-1 flex-wrap">
                         $
                         <input
                           type="number"
@@ -368,15 +367,15 @@ export default function IngredientsPage() {
                     )}
                   </p>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-semibold text-brew-800">
+                <div className="flex items-center justify-between sm:block sm:text-right shrink-0">
+                  <div className="text-base sm:text-lg font-semibold text-brew-800">
                     ${Number(ing.cost_per_recipe_unit).toFixed(4)}
                     <span className="text-sm font-normal text-brew-400">
                       /{ing.recipe_unit}
                     </span>
                   </div>
-                  <div className="mt-1 flex gap-2 justify-end">
-                    <span className="text-xs text-brew-400">
+                  <div className="flex gap-2 sm:mt-1 sm:justify-end">
+                    <span className="text-xs text-brew-400 hidden sm:inline">
                       Updated {new Date(ing.updated_at).toLocaleDateString()}
                     </span>
                     <button

@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import MobileNav from "@/components/MobileNav";
 
 export const metadata: Metadata = {
   title: "BrewCost — Coffee Shop Cost Calculator",
@@ -14,13 +15,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+      </head>
       <body className="bg-brew-50 text-brew-900 min-h-screen antialiased">
         <nav className="border-b border-brew-200 bg-white">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
             <a href="/" className="text-xl font-bold text-brew-800">
               BrewCost
             </a>
-            <div className="flex gap-6 text-sm font-medium">
+            {/* Desktop nav */}
+            <div className="hidden sm:flex gap-6 text-sm font-medium">
               <a
                 href="/"
                 className="text-brew-600 hover:text-brew-900 transition-colors"
@@ -40,9 +45,11 @@ export default function RootLayout({
                 New Recipe
               </a>
             </div>
+            {/* Mobile hamburger */}
+            <MobileNav />
           </div>
         </nav>
-        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+        <main className="mx-auto max-w-5xl px-4 py-6 sm:py-8">{children}</main>
       </body>
     </html>
   );

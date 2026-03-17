@@ -148,19 +148,20 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      {/* Header - stacks on mobile */}
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard</h1>
-          <p className="text-sm text-brew-500 mt-1">
+          <h1 className="text-xl sm:text-2xl font-bold">Dashboard</h1>
+          <p className="text-sm text-brew-500 mt-0.5">
             All your recipes at a glance.
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           {/* View toggle */}
           <div className="flex rounded-lg border border-brew-200 bg-white overflow-hidden">
             <button
               onClick={() => setView("cards")}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-colors ${
                 view === "cards"
                   ? "bg-brew-800 text-white"
                   : "text-brew-500 hover:text-brew-800"
@@ -170,7 +171,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setView("grid")}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-colors ${
                 view === "grid"
                   ? "bg-brew-800 text-white"
                   : "text-brew-500 hover:text-brew-800"
@@ -180,7 +181,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setView("report")}
-              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+              className={`px-2.5 sm:px-3 py-1.5 text-xs font-medium transition-colors ${
                 view === "report"
                   ? "bg-brew-800 text-white"
                   : "text-brew-500 hover:text-brew-800"
@@ -192,7 +193,7 @@ export default function DashboardPage() {
           {view === "cards" && (
             <a
               href="/recipes/new"
-              className="rounded-lg bg-brew-800 px-4 py-2 text-sm font-medium text-white hover:bg-brew-700 transition-colors"
+              className="rounded-lg bg-brew-800 px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white hover:bg-brew-700 transition-colors whitespace-nowrap"
             >
               + New Recipe
             </a>
@@ -200,48 +201,50 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* Margin threshold settings */}
-      <div className="mb-6 flex items-center gap-4 rounded-lg border border-brew-200 bg-white px-4 py-2.5">
-        <span className="text-xs font-medium text-brew-500 mr-1">Margin Targets:</span>
-        <label className="flex items-center gap-1.5 text-xs">
-          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
-          <span className="text-brew-500">≥</span>
-          <input
-            type="number"
-            value={thresholds.green}
-            onChange={(e) =>
-              updateThresholds({ ...thresholds, green: Number(e.target.value) })
-            }
-            className="w-12 rounded border border-brew-200 px-1.5 py-0.5 text-xs text-center text-brew-800 focus:outline-none focus:border-brew-400"
-          />
-          <span className="text-brew-400">%</span>
-        </label>
-        <label className="flex items-center gap-1.5 text-xs">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />
-          <span className="text-brew-500">≥</span>
-          <input
-            type="number"
-            value={thresholds.yellow}
-            onChange={(e) =>
-              updateThresholds({ ...thresholds, yellow: Number(e.target.value) })
-            }
-            className="w-12 rounded border border-brew-200 px-1.5 py-0.5 text-xs text-center text-brew-800 focus:outline-none focus:border-brew-400"
-          />
-          <span className="text-brew-400">%</span>
-        </label>
-        <label className="flex items-center gap-1.5 text-xs">
-          <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
-          <span className="text-brew-500">&lt;</span>
-          <input
-            type="number"
-            value={thresholds.red}
-            onChange={(e) =>
-              updateThresholds({ ...thresholds, red: Number(e.target.value) })
-            }
-            className="w-12 rounded border border-brew-200 px-1.5 py-0.5 text-xs text-center text-brew-800 focus:outline-none focus:border-brew-400"
-          />
-          <span className="text-brew-400">%</span>
-        </label>
+      {/* Margin threshold settings - wraps on mobile */}
+      <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-lg border border-brew-200 bg-white px-3 sm:px-4 py-2.5">
+        <span className="text-xs font-medium text-brew-500">Margin Targets:</span>
+        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+          <label className="flex items-center gap-1.5 text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+            <span className="text-brew-500">≥</span>
+            <input
+              type="number"
+              value={thresholds.green}
+              onChange={(e) =>
+                updateThresholds({ ...thresholds, green: Number(e.target.value) })
+              }
+              className="w-12 rounded border border-brew-200 px-1.5 py-0.5 text-xs text-center text-brew-800 focus:outline-none focus:border-brew-400"
+            />
+            <span className="text-brew-400">%</span>
+          </label>
+          <label className="flex items-center gap-1.5 text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />
+            <span className="text-brew-500">≥</span>
+            <input
+              type="number"
+              value={thresholds.yellow}
+              onChange={(e) =>
+                updateThresholds({ ...thresholds, yellow: Number(e.target.value) })
+              }
+              className="w-12 rounded border border-brew-200 px-1.5 py-0.5 text-xs text-center text-brew-800 focus:outline-none focus:border-brew-400"
+            />
+            <span className="text-brew-400">%</span>
+          </label>
+          <label className="flex items-center gap-1.5 text-xs">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
+            <span className="text-brew-500">&lt;</span>
+            <input
+              type="number"
+              value={thresholds.red}
+              onChange={(e) =>
+                updateThresholds({ ...thresholds, red: Number(e.target.value) })
+              }
+              className="w-12 rounded border border-brew-200 px-1.5 py-0.5 text-xs text-center text-brew-800 focus:outline-none focus:border-brew-400"
+            />
+            <span className="text-brew-400">%</span>
+          </label>
+        </div>
       </div>
 
       {view === "report" ? (
@@ -268,7 +271,7 @@ export default function DashboardPage() {
           </a>
         </div>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {recipes.map((recipe) => {
             const mColor = getMarginColor(recipe.margin, thresholds);
             const bColor = getMarginBorder(recipe.margin, thresholds);
@@ -276,16 +279,16 @@ export default function DashboardPage() {
             return (
               <div
                 key={recipe.id}
-                className={`rounded-lg border border-brew-200 bg-white p-4 border-l-4 ${bColor} hover:shadow-sm transition-shadow`}
+                className={`rounded-lg border border-brew-200 bg-white p-3 sm:p-4 border-l-4 ${bColor} hover:shadow-sm transition-shadow`}
               >
-                <div className="mb-3 flex items-start justify-between">
-                  <div>
-                    <h3 className="font-semibold text-brew-800">{recipe.name}</h3>
+                <div className="mb-2 sm:mb-3 flex items-start justify-between">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="font-semibold text-brew-800 text-sm sm:text-base truncate">{recipe.name}</h3>
                     {recipe.size && (
                       <span className="text-xs text-brew-400">{recipe.size}</span>
                     )}
                   </div>
-                  <div className="flex gap-2 text-xs">
+                  <div className="flex gap-2 text-xs ml-2 shrink-0">
                     <a
                       href={`/recipes/${recipe.id}`}
                       className="text-brew-500 hover:text-brew-800 hover:underline"
@@ -297,13 +300,13 @@ export default function DashboardPage() {
                       disabled={duplicating === recipe.id}
                       className="text-brew-500 hover:text-brew-800 hover:underline disabled:opacity-50"
                     >
-                      {duplicating === recipe.id ? "Copying..." : "Duplicate"}
+                      {duplicating === recipe.id ? "..." : "Dup"}
                     </button>
                     <button
                       onClick={() => handleDelete(recipe.id)}
                       className="text-red-400 hover:text-red-600 hover:underline"
                     >
-                      Delete
+                      Del
                     </button>
                   </div>
                 </div>
@@ -315,7 +318,7 @@ export default function DashboardPage() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-brew-500">Menu Price</span>
+                    <span className="text-brew-500">Price</span>
                     <span>
                       {recipe.menu_price
                         ? formatCurrency(Number(recipe.menu_price))

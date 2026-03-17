@@ -141,8 +141,8 @@ export default function CostReport({ thresholds }: CostReportProps) {
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-brew-800">Cost Report</h2>
+      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-base sm:text-lg font-semibold text-brew-800">Cost Report</h2>
         <button
           onClick={exportCSV}
           className="flex items-center gap-1.5 rounded-lg border border-brew-200 bg-white px-3 py-1.5 text-xs font-medium text-brew-600 hover:bg-brew-50 transition-colors"
@@ -154,45 +154,47 @@ export default function CostReport({ thresholds }: CostReportProps) {
         </button>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         {groups.map((group) => (
           <div key={group.name} className="rounded-lg border border-brew-200 bg-white overflow-hidden">
-            <div className="bg-brew-50 px-4 py-2.5 border-b border-brew-200">
-              <h3 className="font-semibold text-brew-800">{group.name}</h3>
+            <div className="bg-brew-50 px-3 sm:px-4 py-2 sm:py-2.5 border-b border-brew-200">
+              <h3 className="font-semibold text-brew-800 text-sm sm:text-base">{group.name}</h3>
             </div>
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-brew-100 text-brew-500 text-xs">
-                  <th className="text-left px-4 py-2 font-medium">Size</th>
-                  <th className="text-right px-4 py-2 font-medium">Price</th>
-                  <th className="text-right px-4 py-2 font-medium">COGS</th>
-                  <th className="text-right px-4 py-2 font-medium">Margin</th>
-                </tr>
-              </thead>
-              <tbody>
-                {group.rows.map((row) => (
-                  <tr key={row.id} className="border-b border-brew-50 last:border-b-0 hover:bg-brew-25">
-                    <td className="px-4 py-2.5 text-brew-700">
-                      {row.size || "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-right text-brew-700">
-                      {row.menu_price ? formatCurrency(Number(row.menu_price)) : "—"}
-                    </td>
-                    <td className="px-4 py-2.5 text-right font-mono text-brew-700">
-                      {formatCost(row.total_cost)}
-                    </td>
-                    <td className="px-4 py-2.5 text-right">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${getMarginDot(row.margin, thresholds)}`} />
-                        <span className={`font-semibold ${getMarginColor(row.margin, thresholds)}`}>
-                          {row.margin !== null ? formatPercent(row.margin) : "—"}
-                        </span>
-                      </span>
-                    </td>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-brew-100 text-brew-500 text-xs">
+                    <th className="text-left px-3 sm:px-4 py-2 font-medium">Size</th>
+                    <th className="text-right px-3 sm:px-4 py-2 font-medium">Price</th>
+                    <th className="text-right px-3 sm:px-4 py-2 font-medium">COGS</th>
+                    <th className="text-right px-3 sm:px-4 py-2 font-medium">Margin</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {group.rows.map((row) => (
+                    <tr key={row.id} className="border-b border-brew-50 last:border-b-0 hover:bg-brew-25">
+                      <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-brew-700">
+                        {row.size || "—"}
+                      </td>
+                      <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-right text-brew-700 whitespace-nowrap">
+                        {row.menu_price ? formatCurrency(Number(row.menu_price)) : "—"}
+                      </td>
+                      <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-right font-mono text-brew-700 whitespace-nowrap">
+                        {formatCost(row.total_cost)}
+                      </td>
+                      <td className="px-3 sm:px-4 py-2 sm:py-2.5 text-right whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full ${getMarginDot(row.margin, thresholds)}`} />
+                          <span className={`font-semibold ${getMarginColor(row.margin, thresholds)}`}>
+                            {row.margin !== null ? formatPercent(row.margin) : "—"}
+                          </span>
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ))}
       </div>
