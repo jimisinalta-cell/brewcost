@@ -71,6 +71,15 @@ export default function DashboardPage() {
       return { ...recipe, total_cost, margin };
     });
 
+    // Sort by name, then by size (numeric portion) within each name
+    rows.sort((a, b) => {
+      const nameCompare = a.name.localeCompare(b.name);
+      if (nameCompare !== 0) return nameCompare;
+      const sizeA = a.size?.match(/(\d+)/)?.[1];
+      const sizeB = b.size?.match(/(\d+)/)?.[1];
+      return (parseInt(sizeA || "0", 10)) - (parseInt(sizeB || "0", 10));
+    });
+
     setRecipes(rows);
     setLoading(false);
   }, []);
