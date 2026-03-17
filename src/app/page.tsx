@@ -11,13 +11,14 @@ import {
   calculateMargin,
 } from "@/lib/utils";
 import RecipeGrid from "@/components/RecipeGrid";
+import CostReport from "@/components/CostReport";
 
 interface RecipeRow extends Recipe {
   total_cost: number;
   margin: number | null;
 }
 
-type ViewMode = "cards" | "grid";
+type ViewMode = "cards" | "grid" | "report";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -171,6 +172,16 @@ export default function DashboardPage() {
             >
               Grid
             </button>
+            <button
+              onClick={() => setView("report")}
+              className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                view === "report"
+                  ? "bg-brew-800 text-white"
+                  : "text-brew-500 hover:text-brew-800"
+              }`}
+            >
+              Report
+            </button>
           </div>
           {view === "cards" && (
             <a
@@ -183,7 +194,9 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {view === "grid" ? (
+      {view === "report" ? (
+        <CostReport />
+      ) : view === "grid" ? (
         <div className="rounded-lg border border-brew-200 bg-white overflow-hidden">
           <RecipeGrid />
         </div>
@@ -210,17 +223,17 @@ export default function DashboardPage() {
             const marginColor =
               recipe.margin === null
                 ? "text-brew-400"
-                : recipe.margin >= 65
-                ? "text-margin-good"
-                : recipe.margin >= 50
-                ? "text-margin-warn"
-                : "text-margin-bad";
+                : recipe.margin >= 80
+                ? "text-emerald-600"
+                : recipe.margin >= 70
+                ? "text-amber-500"
+                : "text-red-500";
 
             const borderColor =
-              recipe.margin !== null && recipe.margin < 65
-                ? recipe.margin < 50
-                  ? "border-l-margin-bad"
-                  : "border-l-margin-warn"
+              recipe.margin !== null && recipe.margin < 80
+                ? recipe.margin < 70
+                  ? "border-l-red-400"
+                  : "border-l-amber-400"
                 : "border-l-transparent";
 
             return (
