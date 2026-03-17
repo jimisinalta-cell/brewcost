@@ -9,6 +9,11 @@ import {
   formatPercent,
   calculateMargin,
 } from "@/lib/utils";
+import {
+  MarginThresholds,
+  getMarginColor,
+  getMarginDot,
+} from "@/lib/useMarginThresholds";
 
 interface RecipeRow extends Recipe {
   total_cost: number;
@@ -20,21 +25,11 @@ interface RecipeGroup {
   rows: RecipeRow[];
 }
 
-function marginColor(margin: number | null): string {
-  if (margin === null) return "text-brew-400";
-  if (margin >= 80) return "text-emerald-600";
-  if (margin >= 70) return "text-amber-500";
-  return "text-red-500";
+interface CostReportProps {
+  thresholds: MarginThresholds;
 }
 
-function marginDot(margin: number | null): string {
-  if (margin === null) return "bg-brew-300";
-  if (margin >= 80) return "bg-emerald-500";
-  if (margin >= 70) return "bg-amber-400";
-  return "bg-red-500";
-}
-
-export default function CostReport() {
+export default function CostReport({ thresholds }: CostReportProps) {
   const [groups, setGroups] = useState<RecipeGroup[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -188,8 +183,8 @@ export default function CostReport() {
                     </td>
                     <td className="px-4 py-2.5 text-right">
                       <span className="inline-flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${marginDot(row.margin)}`} />
-                        <span className={`font-semibold ${marginColor(row.margin)}`}>
+                        <span className={`w-2 h-2 rounded-full ${getMarginDot(row.margin, thresholds)}`} />
+                        <span className={`font-semibold ${getMarginColor(row.margin, thresholds)}`}>
                           {row.margin !== null ? formatPercent(row.margin) : "—"}
                         </span>
                       </span>

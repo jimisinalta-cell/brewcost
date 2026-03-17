@@ -10,6 +10,11 @@ import {
   formatPercent,
   calculateMargin,
 } from "@/lib/utils";
+import {
+  useMarginThresholds,
+  getMarginColor,
+  getMarginBorder,
+} from "@/lib/useMarginThresholds";
 import RecipeGrid from "@/components/RecipeGrid";
 import CostReport from "@/components/CostReport";
 
@@ -26,6 +31,7 @@ export default function DashboardPage() {
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState<string | null>(null);
+  const { thresholds, updateThresholds } = useMarginThresholds();
 
   const fetchRecipes = useCallback(async () => {
     const { data: recipesData, error: recipesError } = await supabase
@@ -142,7 +148,7 @@ export default function DashboardPage() {
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-4 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Dashboard</h1>
           <p className="text-sm text-brew-500 mt-1">
@@ -194,8 +200,52 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Margin threshold settings */}
+      <div className="mb-6 flex items-center gap-4 rounded-lg border border-brew-200 bg-white px-4 py-2.5">
+        <span className="text-xs font-medium text-brew-500 mr-1">Margin Targets:</span>
+        <label className="flex items-center gap-1.5 text-xs">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block" />
+          <span className="text-brew-500">≥</span>
+          <input
+            type="number"
+            value={thresholds.green}
+            onChange={(e) =>
+              updateThresholds({ ...thresholds, green: Number(e.target.value) })
+            }
+            className="w-12 rounded border border-brew-200 px-1.5 py-0.5 text-xs text-center text-brew-800 focus:outline-none focus:border-brew-400"
+          />
+          <span className="text-brew-400">%</span>
+        </label>
+        <label className="flex items-center gap-1.5 text-xs">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block" />
+          <span className="text-brew-500">≥</span>
+          <input
+            type="number"
+            value={thresholds.yellow}
+            onChange={(e) =>
+              updateThresholds({ ...thresholds, yellow: Number(e.target.value) })
+            }
+            className="w-12 rounded border border-brew-200 px-1.5 py-0.5 text-xs text-center text-brew-800 focus:outline-none focus:border-brew-400"
+          />
+          <span className="text-brew-400">%</span>
+        </label>
+        <label className="flex items-center gap-1.5 text-xs">
+          <span className="w-2.5 h-2.5 rounded-full bg-red-500 inline-block" />
+          <span className="text-brew-500">&lt;</span>
+          <input
+            type="number"
+            value={thresholds.red}
+            onChange={(e) =>
+              updateThresholds({ ...thresholds, red: Number(e.target.value) })
+            }
+            className="w-12 rounded border border-brew-200 px-1.5 py-0.5 text-xs text-center text-brew-800 focus:outline-none focus:border-brew-400"
+          />
+          <span className="text-brew-400">%</span>
+        </label>
+      </div>
+
       {view === "report" ? (
-        <CostReport />
+        <CostReport thresholds={thresholds} />
       ) : view === "grid" ? (
         <div className="rounded-lg border border-brew-200 bg-white overflow-hidden">
           <RecipeGrid />
@@ -220,26 +270,13 @@ export default function DashboardPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {recipes.map((recipe) => {
-            const marginColor =
-              recipe.margin === null
-                ? "text-brew-400"
-                : recipe.margin >= 80
-                ? "text-emerald-600"
-                : recipe.margin >= 70
-                ? "text-amber-500"
-                : "text-red-500";
-
-            const borderColor =
-              recipe.margin !== null && recipe.margin < 80
-                ? recipe.margin < 70
-                  ? "border-l-red-400"
-                  : "border-l-amber-400"
-                : "border-l-transparent";
+            const mColor = getMarginColor(recipe.margin, thresholds);
+            const bColor = getMarginBorder(recipe.margin, thresholds);
 
             return (
               <div
                 key={recipe.id}
-                className={`rounded-lg border border-brew-200 bg-white p-4 border-l-4 ${borderColor} hover:shadow-sm transition-shadow`}
+                className={`rounded-lg border border-brew-200 bg-white p-4 border-l-4 ${bColor} hover:shadow-sm transition-shadow`}
               >
                 <div className="mb-3 flex items-start justify-between">
                   <div>
@@ -287,7 +324,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="flex justify-between">
                     <span className="text-brew-500">Margin</span>
-                    <span className={`font-semibold ${marginColor}`}>
+                    <span className={`font-semibold ${mColor}`}>
                       {recipe.margin !== null
                         ? formatPercent(recipe.margin)
                         : "—"}
