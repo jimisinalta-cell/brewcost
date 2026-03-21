@@ -1,6 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
+// Backward-compatible shim — existing imports of `supabase` continue working.
+// New code should import `createClient` from "@/lib/supabase/client" directly.
+import { createClient } from "./supabase/client";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export { createClient };
+export const supabase = createClient();

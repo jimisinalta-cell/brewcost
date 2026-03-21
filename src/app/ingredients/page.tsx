@@ -12,6 +12,7 @@ import {
   convertToRecipeUnit,
 } from "@/types/database";
 import { formatCurrency } from "@/lib/utils";
+import { useSubscription } from "@/lib/subscription";
 
 export default function IngredientsPage() {
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
@@ -20,6 +21,8 @@ export default function IngredientsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editPrice, setEditPrice] = useState("");
   const [saving, setSaving] = useState(false);
+  const { limits } = useSubscription();
+  const atLimit = ingredients.length >= limits.maxIngredients;
 
   // New ingredient form state
   const [newName, setNewName] = useState("");
@@ -180,12 +183,18 @@ export default function IngredientsPage() {
             Enter what you pay. We calculate the cost per recipe unit.
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(!showForm)}
-          className="self-start rounded-lg bg-brew-800 px-4 py-2 text-sm font-medium text-white hover:bg-brew-700 transition-colors whitespace-nowrap"
-        >
-          {showForm ? "Cancel" : "+ Add Ingredient"}
-        </button>
+        {atLimit ? (
+          <span className="self-start rounded-lg bg-brew-200 px-4 py-2 text-sm font-medium text-brew-500 whitespace-nowrap">
+            {limits.maxIngredients} / {limits.maxIngredients} ingredients (upgrade for more)
+          </span>
+        ) : (
+          <button
+            onClick={() => setShowForm(!showForm)}
+            className="self-start rounded-lg bg-brew-800 px-4 py-2 text-sm font-medium text-white hover:bg-brew-700 transition-colors whitespace-nowrap"
+          >
+            {showForm ? "Cancel" : "+ Add Ingredient"}
+          </button>
+        )}
       </div>
 
       {showForm && (

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import MobileNav from "@/components/MobileNav";
+import UserMenu from "@/components/UserMenu";
+import { SubscriptionProvider } from "@/lib/subscription";
+import SessionGuard from "@/components/SessionGuard";
 
 export const metadata: Metadata = {
   title: "BrewCost — Coffee Shop Cost Calculator",
@@ -25,7 +28,7 @@ export default function RootLayout({
               BrewCost
             </a>
             {/* Desktop nav */}
-            <div className="hidden sm:flex gap-6 text-sm font-medium">
+            <div className="hidden sm:flex items-center gap-6 text-sm font-medium">
               <a
                 href="/"
                 className="text-brew-600 hover:text-brew-900 transition-colors"
@@ -44,12 +47,17 @@ export default function RootLayout({
               >
                 New Recipe
               </a>
+              <UserMenu />
             </div>
             {/* Mobile hamburger */}
             <MobileNav />
           </div>
         </nav>
-        <main className="mx-auto max-w-5xl px-4 py-6 sm:py-8">{children}</main>
+        <main className="mx-auto max-w-5xl px-4 py-6 sm:py-8">
+          <SubscriptionProvider>
+            <SessionGuard>{children}</SessionGuard>
+          </SubscriptionProvider>
+        </main>
       </body>
     </html>
   );

@@ -43,9 +43,16 @@ export default function MobileNav() {
             <a
               href="/recipes/new"
               onClick={() => setOpen(false)}
-              className="py-3 text-sm font-medium text-brew-600 hover:text-brew-900"
+              className="py-3 text-sm font-medium text-brew-600 hover:text-brew-900 border-b border-brew-100"
             >
               New Recipe
+            </a>
+            <a
+              href="/account"
+              onClick={() => setOpen(false)}
+              className="py-3 text-sm font-medium text-brew-600 hover:text-brew-900"
+            >
+              Account
             </a>
           </div>
         </div>

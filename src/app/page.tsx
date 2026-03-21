@@ -17,6 +17,8 @@ import {
 } from "@/lib/useMarginThresholds";
 import RecipeGrid from "@/components/RecipeGrid";
 import CostReport from "@/components/CostReport";
+import UpgradePrompt from "@/components/UpgradePrompt";
+import { useSubscription } from "@/lib/subscription";
 
 interface RecipeRow extends Recipe {
   total_cost: number;
@@ -32,6 +34,7 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [duplicating, setDuplicating] = useState<string | null>(null);
   const { thresholds, updateThresholds } = useMarginThresholds();
+  const { limits } = useSubscription();
 
   const fetchRecipes = useCallback(async () => {
     const { data: recipesData, error: recipesError } = await supabase
@@ -248,11 +251,19 @@ export default function DashboardPage() {
       </div>
 
       {view === "report" ? (
-        <CostReport thresholds={thresholds} />
+        limits.reportView ? (
+          <CostReport thresholds={thresholds} />
+        ) : (
+          <UpgradePrompt feature="Cost Report view" />
+        )
       ) : view === "grid" ? (
-        <div className="rounded-lg border border-brew-200 bg-white overflow-hidden">
-          <RecipeGrid />
-        </div>
+        limits.gridView ? (
+          <div className="rounded-lg border border-brew-200 bg-white overflow-hidden">
+            <RecipeGrid />
+          </div>
+        ) : (
+          <UpgradePrompt feature="Grid view" />
+        )
       ) : loading ? (
         <div className="flex items-center justify-center py-20">
           <div className="text-brew-500">Loading dashboard...</div>
