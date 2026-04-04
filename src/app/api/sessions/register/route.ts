@@ -61,15 +61,22 @@ export async function POST(request: Request) {
   });
 
   // Notify on first-ever login: check if user has logged in before
-  // by looking for any existing session tokens (before we just created one)
   const { count } = await adminClient
     .from("user_sessions")
     .select("id", { count: "exact", head: true })
     .eq("user_id", user.id);
 
+  console.log(`[session-register] user=${user.email} sessionCount=${count}`);
+
   // count === 1 means the only session is the one we just created above
   if (count === 1) {
-    notifyNewSignup(user.email || "unknown");
+    console.log(`[session-register] First login detected, sending notification for ${user.email}`);
+    try {
+      await notifyNewSignup(user.email || "unknown");
+      console.log(`[session-register] Notification sent successfully`);
+    } catch (err) {
+      console.error(`[session-register] Notification failed:`, err);
+    }
   }
 
   const response = NextResponse.json({ ok: true });
