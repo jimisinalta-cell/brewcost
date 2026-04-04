@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { adminClient } from "@/lib/supabase/admin";
 import { randomUUID } from "crypto";
-import { notifyNewSignup } from "@/lib/email";
 
 const MAX_SESSIONS = 1;
 const HEARTBEAT_THRESHOLD_MS = 60_000; // 60 seconds
@@ -59,25 +58,6 @@ export async function POST(request: Request) {
     user_agent: userAgent,
     ip_address: ip,
   });
-
-  // Notify on first-ever login: check if user has logged in before
-  const { count } = await adminClient
-    .from("user_sessions")
-    .select("id", { count: "exact", head: true })
-    .eq("user_id", user.id);
-
-  console.log(`[session-register] user=${user.email} sessionCount=${count}`);
-
-  // count === 1 means the only session is the one we just created above
-  if (count === 1) {
-    console.log(`[session-register] First login detected, sending notification for ${user.email}`);
-    try {
-      await notifyNewSignup(user.email || "unknown");
-      console.log(`[session-register] Notification sent successfully`);
-    } catch (err) {
-      console.error(`[session-register] Notification failed:`, err);
-    }
-  }
 
   const response = NextResponse.json({ ok: true });
   response.cookies.set("bc_session", sessionToken, {

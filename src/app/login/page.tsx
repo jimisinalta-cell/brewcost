@@ -43,6 +43,8 @@ function LoginForm() {
       if (error) {
         setError(error.message);
       } else {
+        // Fire-and-forget: notify admin if this is a first login
+        fetch("/api/notify-signup", { method: "POST" }).catch(() => {});
         router.push("/");
         router.refresh();
       }
