@@ -27,7 +27,7 @@ function LoginForm() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback`,
+          emailRedirectTo: `https://brewcost.com/auth/callback`,
         },
       });
       if (error) {

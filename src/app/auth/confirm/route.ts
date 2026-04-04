@@ -3,18 +3,19 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next") ?? "/";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://brewcost.com";
 
   if (token_hash && type) {
     const supabase = await createClient();
     const { error } = await supabase.auth.verifyOtp({ token_hash, type });
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${baseUrl}${next}`);
     }
   }
 
-  return NextResponse.redirect(`${origin}/login`);
+  return NextResponse.redirect(`${baseUrl}/login`);
 }
