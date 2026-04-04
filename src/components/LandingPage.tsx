@@ -15,7 +15,7 @@ export default function LandingPage() {
               Sign In
             </a>
             <a
-              href="/login"
+              href="/login?mode=signup"
               className="rounded-lg bg-brew-800 px-4 py-2 text-sm font-medium text-white hover:bg-brew-700 transition-colors"
             >
               Get Started Free
@@ -36,7 +36,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <a
-              href="/login"
+              href="/login?mode=signup"
               className="rounded-lg bg-brew-800 px-6 py-3 text-sm font-medium text-white hover:bg-brew-700 transition-colors"
             >
               Start Free — No Credit Card
@@ -111,7 +111,7 @@ export default function LandingPage() {
                 </li>
               </ul>
               <a
-                href="/login"
+                href="/login?mode=signup"
                 className="mt-6 block w-full rounded-lg border border-brew-300 bg-white px-4 py-2.5 text-center text-sm font-medium text-brew-700 hover:bg-brew-50 transition-colors"
               >
                 Get Started
@@ -150,7 +150,7 @@ export default function LandingPage() {
                 </li>
               </ul>
               <a
-                href="/login"
+                href="/login?mode=signup"
                 className="mt-6 block w-full rounded-lg bg-brew-800 px-4 py-2.5 text-center text-sm font-medium text-white hover:bg-brew-700 transition-colors"
               >
                 Start Free, Upgrade Anytime
