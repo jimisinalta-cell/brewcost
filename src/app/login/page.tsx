@@ -33,7 +33,7 @@ function LoginForm() {
       if (error) {
         setError(error.message);
       } else {
-        setMessage("Check your email for a confirmation link.");
+        setMessage("Check your email for a confirmation link. If you don't see it, check your spam folder.");
       }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
