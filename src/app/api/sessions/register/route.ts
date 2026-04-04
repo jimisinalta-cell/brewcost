@@ -60,13 +60,16 @@ export async function POST(request: Request) {
     ip_address: ip,
   });
 
-  // Notify on first-ever login: user was created recently (within 24h)
-  // and had no active sessions before this one
-  if (!activeSessions || activeSessions.length === 0) {
-    const userAge = Date.now() - new Date(user.created_at).getTime();
-    if (userAge < 24 * 60 * 60 * 1000) {
-      notifyNewSignup(user.email || "unknown");
-    }
+  // Notify on first-ever login: check if user has logged in before
+  // by looking for any existing session tokens (before we just created one)
+  const { count } = await adminClient
+    .from("user_sessions")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", user.id);
+
+  // count === 1 means the only session is the one we just created above
+  if (count === 1) {
+    notifyNewSignup(user.email || "unknown");
   }
 
   const response = NextResponse.json({ ok: true });
