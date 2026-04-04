@@ -60,16 +60,11 @@ export async function POST(request: Request) {
     ip_address: ip,
   });
 
-  // Notify on first login (subscription created within last 5 minutes)
-  const { data: sub } = await adminClient
-    .from("subscriptions")
-    .select("created_at")
-    .eq("user_id", user.id)
-    .single();
-
-  if (sub) {
-    const subAge = Date.now() - new Date(sub.created_at).getTime();
-    if (subAge < 5 * 60 * 1000) {
+  // Notify on first-ever login: user was created recently (within 24h)
+  // and had no active sessions before this one
+  if (!activeSessions || activeSessions.length === 0) {
+    const userAge = Date.now() - new Date(user.created_at).getTime();
+    if (userAge < 24 * 60 * 60 * 1000) {
       notifyNewSignup(user.email || "unknown");
     }
   }
