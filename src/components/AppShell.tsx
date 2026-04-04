@@ -74,6 +74,12 @@ export default function AppShell({ children }: { children: ReactNode }) {
             >
               New Recipe
             </a>
+            <a
+              href="/contact"
+              className="text-brew-600 hover:text-brew-900 transition-colors"
+            >
+              Contact
+            </a>
             <UserMenu />
           </div>
           <MobileNav />

@@ -48,6 +48,13 @@ export default function MobileNav() {
               New Recipe
             </a>
             <a
+              href="/contact"
+              onClick={() => setOpen(false)}
+              className="py-3 text-sm font-medium text-brew-600 hover:text-brew-900 border-b border-brew-100"
+            >
+              Contact
+            </a>
+            <a
               href="/account"
               onClick={() => setOpen(false)}
               className="py-3 text-sm font-medium text-brew-600 hover:text-brew-900"

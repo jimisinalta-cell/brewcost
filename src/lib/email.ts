@@ -33,6 +33,42 @@ export async function notifyNewSignup(userEmail: string) {
   }
 }
 
+export async function sendContactMessage({
+  userEmail,
+  plan,
+  category,
+  message,
+}: {
+  userEmail: string;
+  plan: string;
+  category: string;
+  message: string;
+}) {
+  const planBadge =
+    plan === "paid"
+      ? '<span style="background:#16a34a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Pro</span>'
+      : '<span style="background:#b8943a;color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;">Free</span>';
+
+  await transporter.sendMail({
+    from: `"BrewCost" <${FROM_EMAIL}>`,
+    to: NOTIFY_EMAIL,
+    replyTo: userEmail,
+    subject: `[BrewCost] ${category} from ${userEmail}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;padding:24px;">
+        <h2 style="color:#2d1f0e;margin:0 0 16px;">New ${category}</h2>
+        <table style="font-size:14px;color:#6b4d30;margin-bottom:16px;">
+          <tr><td style="padding:4px 12px 4px 0;font-weight:600;">From</td><td>${userEmail}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Plan</td><td>${planBadge}</td></tr>
+          <tr><td style="padding:4px 12px 4px 0;font-weight:600;">Category</td><td>${category}</td></tr>
+        </table>
+        <div style="background:#faf6eb;border:1px solid #e8d5a0;border-radius:8px;padding:16px;font-size:14px;color:#2d1f0e;line-height:1.6;white-space:pre-wrap;">${message}</div>
+        <p style="color:#b8943a;font-size:11px;margin:16px 0 0;">Reply directly to this email to respond to the user.</p>
+      </div>
+    `,
+  });
+}
+
 export async function notifyUpgrade(userEmail: string) {
   try {
     await transporter.sendMail({
