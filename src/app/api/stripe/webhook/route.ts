@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { adminClient } from "@/lib/supabase/admin";
+import { notifyUpgrade } from "@/lib/email";
 import type Stripe from "stripe";
 
 export async function POST(request: Request) {
@@ -49,6 +50,11 @@ export async function POST(request: Request) {
             updated_at: new Date().toISOString(),
           })
           .eq("user_id", userId);
+
+        // Notify admin of new upgrade
+        const customerEmail =
+          session.customer_details?.email || session.customer_email || "unknown";
+        notifyUpgrade(customerEmail);
       }
       break;
     }
