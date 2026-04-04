@@ -25,8 +25,8 @@ interface SubscriptionState {
 }
 
 const FREE_LIMITS = {
-  maxRecipes: 3,
-  maxIngredients: 10,
+  maxRecipes: 2,
+  maxIngredients: 5,
   gridView: false,
   reportView: false,
   csvExport: false,

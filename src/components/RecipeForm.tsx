@@ -11,6 +11,7 @@ import {
   calculateMargin,
   calculateFoodCost,
 } from "@/lib/utils";
+import { useMarginThresholds, getMarginColor } from "@/lib/useMarginThresholds";
 
 interface RecipeIngredientRow {
   id?: string;
@@ -25,6 +26,7 @@ export default function RecipeForm({
   existingRecipe?: Recipe;
 }) {
   const router = useRouter();
+  const { thresholds } = useMarginThresholds();
   const [name, setName] = useState(existingRecipe?.name || "");
   const [size, setSize] = useState(existingRecipe?.size || "");
   const [menuPrice, setMenuPrice] = useState(
@@ -373,13 +375,7 @@ export default function RecipeForm({
                   <div className="flex justify-between text-sm">
                     <span className="text-brew-500">Gross Margin</span>
                     <span
-                      className={`font-semibold ${
-                        margin !== null && margin >= 65
-                          ? "text-margin-good"
-                          : margin !== null && margin >= 50
-                          ? "text-margin-warn"
-                          : "text-margin-bad"
-                      }`}
+                      className={`font-semibold ${getMarginColor(margin, thresholds)}`}
                     >
                       {margin !== null ? formatPercent(margin) : "—"}
                     </span>

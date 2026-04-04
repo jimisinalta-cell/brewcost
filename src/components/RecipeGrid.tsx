@@ -4,6 +4,7 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { Ingredient, Recipe, RecipeIngredient, COMMON_SIZES } from "@/types/database";
 import { formatCost, formatPercent, calculateMargin } from "@/lib/utils";
+import { useMarginThresholds, getMarginColor } from "@/lib/useMarginThresholds";
 
 interface GridRecipe {
   id: string;
@@ -50,6 +51,7 @@ function AddIngredientSelect({
 }
 
 export default function RecipeGrid() {
+  const { thresholds } = useMarginThresholds();
   const [ingredients, setIngredients] = useState<Ingredient[]>([]);
   const [recipes, setRecipes] = useState<GridRecipe[]>([]);
   const [loading, setLoading] = useState(true);
@@ -415,14 +417,7 @@ export default function RecipeGrid() {
                     const cost = getCost(recipe);
                     const price = Number(recipe.menu_price) || 0;
                     const margin = price > 0 ? calculateMargin(price, cost) : null;
-                    const marginColor =
-                      margin === null
-                        ? "text-brew-400"
-                        : margin >= 65
-                        ? "text-margin-good"
-                        : margin >= 50
-                        ? "text-margin-warn"
-                        : "text-margin-bad";
+                    const marginColor = getMarginColor(margin, thresholds);
 
                     return (
                       <tr key={recipe.id} className="border-t border-brew-100 hover:bg-brew-50/30">

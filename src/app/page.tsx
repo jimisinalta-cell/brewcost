@@ -19,6 +19,7 @@ import RecipeGrid from "@/components/RecipeGrid";
 import CostReport from "@/components/CostReport";
 import UpgradePrompt from "@/components/UpgradePrompt";
 import { useSubscription } from "@/lib/subscription";
+import LandingPage from "@/components/LandingPage";
 
 interface RecipeRow extends Recipe {
   total_cost: number;
@@ -28,6 +29,16 @@ interface RecipeRow extends Recipe {
 type ViewMode = "cards" | "grid" | "report";
 
 export default function DashboardPage() {
+  const [authed, setAuthed] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setAuthed(!!user);
+    });
+  }, []);
+
+  if (authed === null) return null;
+  if (!authed) return <LandingPage />;
   const router = useRouter();
   const [view, setView] = useState<ViewMode>("cards");
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);

@@ -68,7 +68,7 @@ CREATE POLICY "Users manage own sessions"
 -- Free-tier limit triggers
 -- ============================================
 
--- Prevent free users from exceeding 3 recipes
+-- Prevent free users from exceeding 2 recipes
 CREATE OR REPLACE FUNCTION public.check_recipe_limit()
 RETURNS trigger AS $$
 DECLARE
@@ -78,8 +78,8 @@ BEGIN
   SELECT plan INTO user_plan FROM public.subscriptions WHERE user_id = NEW.user_id;
   IF user_plan = 'free' THEN
     SELECT count(*) INTO recipe_count FROM public.recipes WHERE user_id = NEW.user_id;
-    IF recipe_count >= 3 THEN
-      RAISE EXCEPTION 'Free tier limited to 3 recipes. Please upgrade.';
+    IF recipe_count >= 2 THEN
+      RAISE EXCEPTION 'Free tier limited to 2 recipes. Please upgrade.';
     END IF;
   END IF;
   RETURN NEW;
@@ -90,7 +90,7 @@ CREATE TRIGGER enforce_recipe_limit
   BEFORE INSERT ON public.recipes
   FOR EACH ROW EXECUTE FUNCTION public.check_recipe_limit();
 
--- Prevent free users from exceeding 10 ingredients
+-- Prevent free users from exceeding 5 ingredients
 CREATE OR REPLACE FUNCTION public.check_ingredient_limit()
 RETURNS trigger AS $$
 DECLARE
@@ -100,8 +100,8 @@ BEGIN
   SELECT plan INTO user_plan FROM public.subscriptions WHERE user_id = NEW.user_id;
   IF user_plan = 'free' THEN
     SELECT count(*) INTO ingredient_count FROM public.ingredients WHERE user_id = NEW.user_id;
-    IF ingredient_count >= 10 THEN
-      RAISE EXCEPTION 'Free tier limited to 10 ingredients. Please upgrade.';
+    IF ingredient_count >= 5 THEN
+      RAISE EXCEPTION 'Free tier limited to 5 ingredients. Please upgrade.';
     END IF;
   END IF;
   RETURN NEW;

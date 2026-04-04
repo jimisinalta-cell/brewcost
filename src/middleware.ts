@@ -33,6 +33,7 @@ export async function middleware(request: NextRequest) {
 
   // Public routes that don't require auth
   const isPublicRoute =
+    pathname === "/" ||
     pathname === "/login" ||
     pathname === "/reset-password" ||
     pathname.startsWith("/auth/") ||
