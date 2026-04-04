@@ -30,15 +30,6 @@ type ViewMode = "cards" | "grid" | "report";
 
 export default function DashboardPage() {
   const [authed, setAuthed] = useState<boolean | null>(null);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setAuthed(!!user);
-    });
-  }, []);
-
-  if (authed === null) return null;
-  if (!authed) return <LandingPage />;
   const router = useRouter();
   const [view, setView] = useState<ViewMode>("cards");
   const [recipes, setRecipes] = useState<RecipeRow[]>([]);
@@ -46,6 +37,12 @@ export default function DashboardPage() {
   const [duplicating, setDuplicating] = useState<string | null>(null);
   const { thresholds, updateThresholds } = useMarginThresholds();
   const { limits } = useSubscription();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setAuthed(!!user);
+    });
+  }, []);
 
   const fetchRecipes = useCallback(async () => {
     const { data: recipesData, error: recipesError } = await supabase
@@ -159,6 +156,9 @@ export default function DashboardPage() {
     }
     setRecipes((prev) => prev.filter((r) => r.id !== id));
   }
+
+  if (authed === null) return null;
+  if (!authed) return <LandingPage />;
 
   return (
     <div>
