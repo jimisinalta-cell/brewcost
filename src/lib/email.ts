@@ -1,17 +1,18 @@
 import nodemailer from "nodemailer";
 
+const port = Number(process.env.SMTP_PORT) || 465;
 const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: Number(process.env.SMTP_PORT) || 587,
-  secure: false,
+  host: process.env.SMTP_HOST || "smtp.resend.com",
+  port,
+  secure: port === 465,
   auth: {
-    user: process.env.SMTP_USER,
+    user: process.env.SMTP_USER || "resend",
     pass: process.env.SMTP_PASS,
   },
 });
 
 const NOTIFY_EMAIL = process.env.NOTIFY_EMAIL || "jim@wydahoroaster.com";
-const FROM_EMAIL = process.env.SMTP_USER || "wydahoroaster@gmail.com";
+const FROM_EMAIL = process.env.SMTP_FROM || "noreply@brewcost.com";
 
 export async function notifyNewSignup(userEmail: string) {
   try {
