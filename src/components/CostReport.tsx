@@ -15,9 +15,12 @@ import {
   getMarginDot,
 } from "@/lib/useMarginThresholds";
 
+type RecipeIngredientRow = RecipeIngredient & { ingredient: Ingredient };
+
 interface RecipeRow extends Recipe {
   total_cost: number;
   margin: number | null;
+  ingredients: RecipeIngredientRow[];
 }
 
 interface RecipeGroup {
@@ -48,9 +51,9 @@ export default function CostReport({ thresholds }: CostReportProps) {
       .from("recipe_ingredients")
       .select("*, ingredient:ingredients(*)");
 
-    const riByRecipe = new Map<string, (RecipeIngredient & { ingredient: Ingredient })[]>();
+    const riByRecipe = new Map<string, RecipeIngredientRow[]>();
     if (riData) {
-      for (const ri of riData as (RecipeIngredient & { ingredient: Ingredient })[]) {
+      for (const ri of riData as RecipeIngredientRow[]) {
         const list = riByRecipe.get(ri.recipe_id) || [];
         list.push(ri);
         riByRecipe.set(ri.recipe_id, list);
@@ -65,7 +68,7 @@ export default function CostReport({ thresholds }: CostReportProps) {
       }, 0);
       const price = Number(recipe.menu_price) || 0;
       const margin = price > 0 ? calculateMargin(price, total_cost) : null;
-      return { ...recipe, total_cost, margin };
+      return { ...recipe, total_cost, margin, ingredients: ris };
     });
 
     // Group by name, sort sizes within each group
@@ -95,6 +98,20 @@ export default function CostReport({ thresholds }: CostReportProps) {
     fetchData();
   }, [fetchData]);
 
+  function csvField(value: string) {
+    return `"${value.replace(/"/g, '""')}"`;
+  }
+
+  function downloadCSV(lines: string[], prefix: string) {
+    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${prefix}-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
   function exportCSV() {
     const header = "Drink,Size,Price,COGS,Margin";
     const lines = [header];
@@ -102,8 +119,8 @@ export default function CostReport({ thresholds }: CostReportProps) {
       for (const row of group.rows) {
         lines.push(
           [
-            `"${row.name}"`,
-            `"${row.size || ""}"`,
+            csvField(row.name),
+            csvField(row.size || ""),
             row.menu_price ? Number(row.menu_price).toFixed(2) : "",
             row.total_cost.toFixed(4),
             row.margin !== null ? row.margin.toFixed(1) + "%" : "",
@@ -111,13 +128,44 @@ export default function CostReport({ thresholds }: CostReportProps) {
         );
       }
     }
-    const blob = new Blob([lines.join("\n")], { type: "text/csv" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `brewcost-report-${new Date().toISOString().slice(0, 10)}.csv`;
-    a.click();
-    URL.revokeObjectURL(url);
+    downloadCSV(lines, "brewcost-report");
+  }
+
+  // One row per recipe ingredient — the full build of every recipe
+  function exportRecipesCSV() {
+    const header = "Drink,Size,Price,Ingredient,Quantity,Unit,Cost per Unit,Line Cost";
+    const lines = [header];
+    for (const group of groups) {
+      for (const row of group.rows) {
+        const base = [
+          csvField(row.name),
+          csvField(row.size || ""),
+          row.menu_price ? Number(row.menu_price).toFixed(2) : "",
+        ];
+        const ris = row.ingredients
+          .filter((ri) => ri.ingredient)
+          .sort((a, b) => a.ingredient.name.localeCompare(b.ingredient.name));
+        if (ris.length === 0) {
+          lines.push([...base, "", "", "", "", ""].join(","));
+          continue;
+        }
+        for (const ri of ris) {
+          const unitCost = Number(ri.ingredient.cost_per_recipe_unit);
+          const qty = Number(ri.quantity_used);
+          lines.push(
+            [
+              ...base,
+              csvField(ri.ingredient.name),
+              String(qty),
+              ri.ingredient.recipe_unit,
+              unitCost.toFixed(4),
+              (unitCost * qty).toFixed(4),
+            ].join(",")
+          );
+        }
+      }
+    }
+    downloadCSV(lines, "brewcost-recipes");
   }
 
   if (loading) {
@@ -143,15 +191,26 @@ export default function CostReport({ thresholds }: CostReportProps) {
     <div>
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 className="text-base sm:text-lg font-semibold text-brew-800">Cost Report</h2>
-        <button
-          onClick={exportCSV}
-          className="flex items-center gap-1.5 rounded-lg border border-brew-200 bg-white px-3 py-1.5 text-xs font-medium text-brew-600 hover:bg-brew-50 transition-colors"
-        >
-          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-          </svg>
-          Export CSV
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={exportCSV}
+            className="flex items-center gap-1.5 rounded-lg border border-brew-200 bg-white px-3 py-1.5 text-xs font-medium text-brew-600 hover:bg-brew-50 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export Summary
+          </button>
+          <button
+            onClick={exportRecipesCSV}
+            className="flex items-center gap-1.5 rounded-lg border border-brew-200 bg-white px-3 py-1.5 text-xs font-medium text-brew-600 hover:bg-brew-50 transition-colors"
+          >
+            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            Export Recipes
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4 sm:space-y-6">
